@@ -7,6 +7,11 @@ keywords = ["bioinformatics", "genome browser"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "rust_test"
+crate-type = ["staticlib"]
+path = "lib"
+
 [dependencies]
 bitpacking = "0.5" # Pfor
 flate2 = "1.0" # A streaming compression/decompression library
