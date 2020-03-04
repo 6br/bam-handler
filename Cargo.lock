@@ -352,7 +352,7 @@ checksum = "b294d6fa9ee409a054354afc4352b0b9ef7ca222c69b8812cbea9e7d2bf3783f"
 [[package]]
 name = "libbigwig"
 version = "0.1.0"
-source = "git+https://github.com/6br/libBigWig#23ceb2ddd34b20a0a10d03e91e9db227d4ea5241"
+source = "git+https://github.com/6br/libBigWig#14274c8571c1bfb32f55bd309d6d3bfc7480808b"
 dependencies = [
  "bindgen 0.53.1",
  "gcc",
