@@ -10,7 +10,6 @@ keywords = ["bioinformatics", "genome browser"]
 [lib]
 name = "rust_test"
 crate-type = ["staticlib"]
-path = "lib"
 
 [dependencies]
 bitpacking = "0.5" # Pfor
