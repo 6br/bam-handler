@@ -1,0 +1,19 @@
+[package]
+name = "rust_test"
+version = "0.1.0"
+authors = ["6br <tfdvrt@gmail.com>"]
+edition = "2018"
+keywords = ["bioinformatics", "genome browser"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitpacking = "0.5" # Pfor
+flate2 = "1.0" # A streaming compression/decompression library
+libbigwig = { git = "https://github.com/6br/libBigWig" } # bigWig
+regex = "*" 
+rust-htslib = { version = "*", features = ["serde"] } # htsLib
+serde = "*"
+serde_derive = "*"
+serde_json = "*"
+serde_yaml = "*"
