@@ -19,7 +19,7 @@ impl fmt::Display for Region {
 }
 
 impl Region {
-    /*
+    
     pub fn interval(&self) -> u64 {
         if self.inverted() {
             return self.start - self.stop
@@ -29,7 +29,7 @@ impl Region {
     }
     pub fn inverted(&self) -> bool {
         self.start > self.stop
-    }*/
+    }
 
     // It is used on converting dna-sequence region to bed-style region.
     pub fn start_minus(&mut self) {

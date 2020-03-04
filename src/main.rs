@@ -29,10 +29,10 @@ fn main() {
 /*
   TEST CASES
 0. 普通に呼べるか? -> hello_rust()
-1. Rust の構造体を他から呼び出しできるか？ -> start_decrement()
-2. flate2 を外部から呼び出しできるか？ -> flate()
+1. Rust の構造体を他から呼び出しできるか？ -> decrement_start()
+2. flate2 を外部から呼び出しできるか？ -> compress_bytes()
 3. bigbed をパースできるか？ -> load_bigbed()
-4. Pfor を外部呼び出しで動作させられるか？ ->  bit_packings()
+4. Pfor を外部呼び出しで動作させられるか？ ->  bit_packing()
 
 */
 
@@ -56,7 +56,7 @@ pub extern fn bit_packing(data: &[u32]) -> Vec<u8> {
 }
 
 #[no_mangle]
-pub extern fn start_decrement(mut region: Region) -> Region {
+pub extern fn decrement_start(mut region: Region) -> Region {
     region.start_minus();
     return region
 }
@@ -71,7 +71,7 @@ pub extern fn load_bigbed(path: String, region: Region) -> Vec<Feature> {
 }
 
 #[no_mangle]
-pub extern fn flate(words: &[u8]) -> Result<Vec<u8>, std::io::Error> {
+pub extern fn compress_bytes(words: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
     e.write_all(words)?;
     let compressed_bytes = e.finish();
