@@ -15,9 +15,12 @@ extern crate regex;
 mod lib;
 
 use bitpacking::{BitPacker4x, BitPacker};
+use flate2::Compression;
+use flate2::write::ZlibEncoder;
 use lib::bigbed::libbigbed;
 use lib::range::{Region};
 use lib::bigbed::{Feature};
+use std::io::prelude::*;
 
 fn main() {
     println!("Hello, world!");
@@ -27,7 +30,7 @@ fn main() {
   TEST CASES
 0. 普通に呼べるか? -> hello_rust()
 1. Rust の構造体を他から呼び出しできるか？ -> start_decrement()
-2. flate2 を外部から呼び出しできるか？
+2. flate2 を外部から呼び出しできるか？ -> flate()
 3. bigwig をパースできるか？ -> load_bigbed()
 4. Pfor を外部呼び出しで動作させられるか？ ->  bit_packings()
 
@@ -65,6 +68,14 @@ pub extern fn load_bigbed(path: String, region: Region) -> Vec<Feature> {
         &region, 
         "".to_owned(),
     )
+}
+
+#[no_mangle]
+pub extern fn flate() -> Result<Vec<u8>, std::io::Error> {
+    let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
+    e.write_all(b"foo")?;
+    let compressed_bytes = e.finish();
+    return compressed_bytes
 }
 
 #[cfg(test)]
