@@ -71,9 +71,9 @@ pub extern fn load_bigbed(path: String, region: Region) -> Vec<Feature> {
 }
 
 #[no_mangle]
-pub extern fn flate() -> Result<Vec<u8>, std::io::Error> {
+pub extern fn flate(words: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
-    e.write_all(b"foo")?;
+    e.write_all(words)?;
     let compressed_bytes = e.finish();
     return compressed_bytes
 }
