@@ -31,7 +31,7 @@ fn main() {
 0. 普通に呼べるか? -> hello_rust()
 1. Rust の構造体を他から呼び出しできるか？ -> start_decrement()
 2. flate2 を外部から呼び出しできるか？ -> flate()
-3. bigwig をパースできるか？ -> load_bigbed()
+3. bigbed をパースできるか？ -> load_bigbed()
 4. Pfor を外部呼び出しで動作させられるか？ ->  bit_packings()
 
 */
