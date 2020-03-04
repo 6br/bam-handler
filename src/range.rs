@@ -36,7 +36,8 @@ impl Region {
         self.start = self.start - 1;
     }
 
-    pub fn new_with_prefix(path: String, chr_prefix: &str) -> Result<Self, Box<dyn Error>> {
+    #[no_mangle]
+    pub extern fn new_with_prefix(path: String, chr_prefix: &str) -> Result<Self, Box<dyn Error>> {
         let re = Regex::new(r"^(.+):(\d+)-?(\d*)$").unwrap();
         let caps = re.captures(&path).ok_or("Parse Error")?;
         let mut path_str = caps.get(1).ok_or("Parse Path Error")?.as_str();
