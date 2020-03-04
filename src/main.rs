@@ -1,19 +1,37 @@
+#![feature(rustc_private)]
+#![feature(plugin)]
+
 #![crate_type="staticlib"]
 
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
+extern crate log;
 extern crate serde_json;
-
+extern crate libbigwig;
 extern crate bitpacking;
+extern crate regex;
 
-use bitpacking::{BitPacker4x, BitPacker, UnsafeBitPacker};
-//use lib::range::Region;
 mod lib;
+
+use bitpacking::{BitPacker4x, BitPacker};
+use lib::bigbed::libbigbed;
+use lib::range::{Region};
+use lib::bigbed::{Feature};
 
 fn main() {
     println!("Hello, world!");
 }
+
+/*
+  TEST CASES
+0. 普通に呼べるか? -> hello_rust()
+1. Rust の構造体を他から呼び出しできるか？ -> start_decrement()
+2. flate2 を外部から呼び出しできるか？
+3. bigwig をパースできるか？ -> load_bigbed()
+4. Pfor を外部呼び出しで動作させられるか？ ->  bit_packings()
+
+*/
 
 #[no_mangle]
 pub extern fn hello_rust() -> *const u8 {
@@ -21,39 +39,40 @@ pub extern fn hello_rust() -> *const u8 {
 }
 
 #[no_mangle]
-pub extern fn bit_packing(data: &Vec<u32>) -> Vec<u8> {
-    let mut original = vec![0u32, data.len()];
+pub extern fn bit_packing(data: &[u32]) -> Vec<u8> {
+    let mut original = vec![0u32, data.len() as u32];
     original.copy_from_slice(data);
 
-    let mut compressed = vec![0u8; (UnsafeBitPacker::BLOCK_LEN as usize) * 4];
-    let numbits = UnsafeBitPacker::num_bits(&original[..]);
+    let bitpacker = BitPacker4x::new();
+    let num_bits: u8 = bitpacker.num_bits(&original);
 
-    UnsafeBitPacker::compress(&original[..], &mut compressed[..], numbits);
+    let mut compressed = vec![0u8; 4 * BitPacker4x::BLOCK_LEN];
+    let _compressed_len = bitpacker.compress(&original, &mut compressed[..], num_bits);
 
-    return compressed;
+    return compressed
 }
 
 #[no_mangle]
-pub extern fn flip_region(region: Region) -> Region {
-
+pub extern fn start_decrement(mut region: Region) -> Region {
+    region.start_minus();
+    return region
 }
 
-/*
-  TEST CASES
-
-1. Rust の構造体を他から呼び出しできるか？
-2. flate2 を外部から呼び出しできるか？
-3. bigwig をパースできるか？
-4. Pfor を外部呼び出しで動作させられるか？ ->  bit_packing
-5. 
-
-*/
+#[no_mangle]
+pub extern fn load_bigbed(path: String, region: Region) -> Vec<Feature> {
+    return libbigbed(
+        path,
+        &region, 
+        "".to_owned(),
+    )
+}
 
 #[cfg(test)]
 mod tests {
-    use super::libbigbed;
-    use lib::{Region, ConfigFeature};
-    use features::{Feature};
+    use super::libbigwig;
+    use crate::lib::range::{Region};
+    use crate::lib::bigbed::{Feature};
+    use crate::lib::bigbed::libbigbed;
 
     #[test]
     fn it_doesnot_work() {
@@ -61,7 +80,7 @@ mod tests {
         assert_eq!(
             vec,
             libbigbed(
-                &ConfigFeature{name: "feature".to_owned(), url: "test/ensGene.bb".to_owned(), chr_prefix: None, viz: None},
+                "test/ensGene.bb".to_string(),
                 &Region {
                     path: "Y".to_owned(),
                     start: 2712790,
@@ -90,7 +109,7 @@ mod tests {
         assert_eq!(
             vec,
             libbigbed(
-                &ConfigFeature{name: "test/ensGene.bb".to_owned(), url: "test/ensGene.bb".to_owned(), chr_prefix: None, viz: None},
+                "test/ensGene.bb".to_string(),
                 &Region {
                     path: "Y".to_owned(),
                     start: 2712790,

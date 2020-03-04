@@ -2,6 +2,7 @@ extern crate serde_yaml;
 use std::error::Error;
 use std::fmt;
 use regex::Regex;
+// use std::r#try;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Region {
@@ -35,11 +36,11 @@ impl Region {
         self.start = self.start - 1;
     }
 
-    pub fn new_with_prefix(path: String, chr_prefix: &str) -> Result<Self, Box<Error>> {
+    pub fn new_with_prefix(path: String, chr_prefix: &str) -> Result<Self, Box<dyn Error>> {
         let re = Regex::new(r"^(.+):(\d+)-?(\d*)$").unwrap();
-        let caps = try!(re.captures(&path).ok_or("Parse Error"));
-        let mut path_str = try!(caps.get(1).ok_or("Parse Path Error")).as_str();
-        let mut path_string: String;
+        let caps = re.captures(&path).ok_or("Parse Error")?;
+        let mut path_str = caps.get(1).ok_or("Parse Path Error")?.as_str();
+        let path_string: String;
         if chr_prefix.len() == 0 {
             if path_str.starts_with("chr") {
                 path_str = &path_str[3..];
@@ -55,25 +56,25 @@ impl Region {
                 path_string = path_str.to_string()
             }
         }
-        let start = try!(caps.get(2).ok_or("Parse Start Position Error"));
-        let stop = try!(caps.get(3).ok_or("Parse Stop Position Error"));
+        let start = caps.get(2).ok_or("Parse Start Position Error")?;
+        let stop = caps.get(3).ok_or("Parse Stop Position Error")?;
         let start_str: &str = start.as_str().as_ref();
         let stop_str: &str = stop.as_str().as_ref();
-        let start_u64: u64 = try!(start_str.parse::<u64>().map_err(|e| "Parse Int Error, ".to_string() + e.description()));
-        let stop_u64: u64 = try!(stop_str.parse::<u64>().map_err(|e| "Parse Int Error, ".to_string() + e.description()));
+        let start_u64: u64 = start_str.parse::<u64>().map_err(|e| "Parse Int Error, ".to_string() + &e.to_string())?;
+        let stop_u64: u64 = stop_str.parse::<u64>().map_err(|e| "Parse Int Error, ".to_string() + &e.to_string())?;
         Ok(Region{path: path_string, start: start_u64, stop: stop_u64})
     }
 
-    pub fn new(path: String) -> Result<Self, Box<Error>> {
+    pub fn new(path: String) -> Result<Self, Box<dyn Error>> {
         let re = Regex::new(r"^(.+):(\d+)-?(\d*)$").unwrap();
-        let caps = try!(re.captures(&path).ok_or("Parse Error"));
-        let path = try!(caps.get(1).ok_or("Parse Path Error"));
-        let start = try!(caps.get(2).ok_or("Parse Start Position Error"));
-        let stop = try!(caps.get(3).ok_or("Parse Stop Position Error"));
+        let caps = re.captures(&path).ok_or("Parse Error")?;
+        let path = caps.get(1).ok_or("Parse Path Error")?;
+        let start = caps.get(2).ok_or("Parse Start Position Error")?;
+        let stop = caps.get(3).ok_or("Parse Stop Position Error")?;
         let start_str: &str = start.as_str().as_ref();
         let stop_str: &str = stop.as_str().as_ref();
-        let start_u64: u64 = try!(start_str.parse::<u64>().map_err(|e| "Parse Int Error, ".to_string() + e.description()));
-        let stop_u64: u64 = try!(stop_str.parse::<u64>().map_err(|e| "Parse Int Error, ".to_string() + e.description()));
+        let start_u64: u64 = start_str.parse::<u64>().map_err(|e| "Parse Int Error, ".to_string() + &e.to_string())?;
+        let stop_u64: u64 = stop_str.parse::<u64>().map_err(|e| "Parse Int Error, ".to_string() + &e.to_string())?;
         Ok(Region{path: path.as_str().to_string(), start: start_u64, stop: stop_u64})
     }
 

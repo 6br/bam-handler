@@ -11,6 +11,7 @@ keywords = ["bioinformatics", "genome browser"]
 bitpacking = "0.5" # Pfor
 flate2 = "1.0" # A streaming compression/decompression library
 libbigwig = { git = "https://github.com/6br/libBigWig" } # bigWig
+log = "*"
 regex = "*" 
 rust-htslib = { version = "*", features = ["serde"] } # htsLib
 serde = "*"

@@ -570,6 +570,7 @@ dependencies = [
  "bitpacking",
  "flate2",
  "libbigwig",
+ "log",
  "regex",
  "rust-htslib",
  "serde",

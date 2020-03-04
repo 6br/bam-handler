@@ -1,9 +1,19 @@
 use libbigwig::*;
-use lib::range::{Region}
+use super::range::{Region};
 use std::ffi::{CString, CStr};
 
-fn libbigwig_simple(feature: &ConfigFeature, coord: &Region, prefix: String) -> Vec<Feature> {
-    let path = &feature.url;
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct Feature {
+    pub start_offset: u64,
+    pub stop_offset: u64,
+    pub id: u64,
+    pub name: String,
+    pub is_reverse: Option<bool>,
+    pub attributes: Vec<String>,
+    pub value: Option<f32>,
+}
+
+pub fn libbigwig_simple(path: String, coord: &Region, prefix: String) -> Vec<Feature> {
     let path_loc = CString::new(path.clone()).unwrap();
     let read_only = CString::new("r").unwrap();
     let path_str = CString::new(prefix + coord.path.as_ref()).unwrap();
@@ -34,7 +44,7 @@ fn libbigwig_simple(feature: &ConfigFeature, coord: &Region, prefix: String) -> 
                     start_offset: start_offset,
                     stop_offset: stop_offset,
                     id: i as u64,
-                    name: feature.name.clone(),
+                    name: path.clone(),
                     attributes: vec![],
                     is_reverse: None,
                     value: Some(value),
@@ -51,8 +61,7 @@ fn libbigwig_simple(feature: &ConfigFeature, coord: &Region, prefix: String) -> 
     return vec;
 }
 
-fn libbigbed(feature: &ConfigFeature, coord: &Region, prefix: String) -> Vec<Feature> {
-    let path = &feature.url;
+pub fn libbigbed(path: String, coord: &Region, prefix: String) -> Vec<Feature> {
     debug!("{:?} {:?}", path, coord);
     let path_loc = CString::new(path.clone()).unwrap();
     let path_str = CString::new(prefix + coord.path.as_ref()).unwrap();
@@ -94,7 +103,7 @@ fn libbigbed(feature: &ConfigFeature, coord: &Region, prefix: String) -> Vec<Fea
                     start_offset: start_offset,
                     stop_offset: stop_offset,
                     id: i as u64,
-                    name: feature.name.clone(),
+                    name: path.clone(),
                     attributes: splitted_attr,
                     is_reverse: None,
                     value: None,
