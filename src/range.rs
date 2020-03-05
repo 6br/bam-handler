@@ -5,6 +5,7 @@ use regex::Regex;
 // use std::r#try;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[repr(C)]
 pub struct Region {
     pub path: String, // Requires no prefix
     pub start: u64,

@@ -28,9 +28,29 @@ use std::io::prelude::*;
 
 */
 
+#[repr(u32)]
+pub enum Foo {
+    A = 1,
+    B,
+    C,
+}
+
 #[no_mangle]
 pub extern fn hello_rust() -> *const u8 {
     "Hello, world!\0".as_ptr()
+}
+
+
+#[no_mangle]
+pub unsafe extern "C" fn print_foo(foo: *const Foo) {
+    println!(
+        "{}",
+        match *foo {
+            Foo::A => "a",
+            Foo::B => "b",
+            Foo::C => "c",
+        }
+    );
 }
 
 #[no_mangle]
