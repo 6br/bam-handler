@@ -58,6 +58,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bam"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "crc32fast",
+ "flate2",
+]
+
+[[package]]
 name = "bindgen"
 version = "0.51.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -131,6 +140,12 @@ checksum = "75c04b83d2b444a22c6a30f4d068597efbe468fe56f068e042e627ded2fb21e7"
 dependencies = [
  "crunchy",
 ]
+
+[[package]]
+name = "byteorder"
+version = "1.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08c48aae112d48ed9f069b33538ea9e3e90aa263cfa3d1c24309612b1f7472de"
 
 [[package]]
 name = "bzip2-sys"
@@ -567,6 +582,7 @@ dependencies = [
 name = "rust_test"
 version = "0.1.0"
 dependencies = [
+ "bam",
  "bitpacking",
  "flate2",
  "libbigwig",
