@@ -70,11 +70,13 @@ impl<T:Test> C<T> {
 fn main() {
     let args: Vec<String> = env::args().collect();
     let reader = bam::IndexedReader::from_path(args[1].clone()).unwrap();
-    println!("{}", reader.index());
-
     for bin in reader.index().references()[0].bins().values() {
         println!("{}\t{}", bin.bin_id(), bin.chunks().len());
     }
+    println!("next")
+    println!("{}", reader.index());
+
+
     /*
     if env::var_os("VIRTUAL_ENV").is_some() {
         println!("a")
