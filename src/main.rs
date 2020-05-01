@@ -73,7 +73,7 @@ fn main() {
     for bin in reader.index().references()[0].bins().values() {
         println!("{}\t{}", bin.bin_id(), bin.chunks().len());
     }
-    println!("next")
+    println!("next");
     println!("{}", reader.index());
 
 
