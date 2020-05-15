@@ -4,8 +4,7 @@ extern crate bam;
 
 use std::env;
 use std::io;
-
-use bam::RecordWriter;
+use std::collections::BTreeMap;
 
 trait Test {
     fn new() -> Self;
@@ -69,14 +68,36 @@ impl<T:Test> C<T> {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let reader = bam::IndexedReader::from_path(args[1].clone()).unwrap();
+    let mut reader = bam::IndexedReader::from_path(args[1].clone()).unwrap();
     for bin in reader.index().references()[0].bins().values() {
-        println!("{}\t{}", bin.bin_id(), bin.chunks().len());
+    //    println!("{}\t{}", bin.bin_id(), bin.chunks().len());
     }
-    println!("next");
-    println!("{}", reader.index());
+    //println!("next");
+    //println!("{}", reader.index());
 
+    let region = [("chr1", 121_700_000, 123_400_000), ("chr5", 46100000, 51400000), ("chr19", 24200000, 28100000)];
+    let margin = 1_000_000;
 
+    for i in region.iter() {
+    let chr = i.0; // "chr1";
+    let id = reader.header().reference_id(chr).unwrap();
+    let mut btree = BTreeMap::<u32, (i32,i32,i32,u32,u32,u32)>::new();
+    for record in reader.fetch(&bam::Region::new(id, i.1 - margin, i.2 + margin)).unwrap() {
+        let record = record.unwrap();
+                    // REF_START, REF_END, REF_LEN, QRY_START, QRY_END, QRY_LEN
+        let tuple = (record.start(), record.calculate_end(), record.calculate_end() - record.start(), record.aligned_query_start(), record.aligned_query_end(), record.query_len());
+        btree.insert(tuple.5, tuple);
+    }
+    let mut index = 0;
+    for (key, value) in btree.iter().rev() {
+        index += 1;
+        println!("READ_LEN: {}, REF {}:{}-{} (len:{})", key, chr, value.0, value.1, value.2);
+        if (index > 9) {
+            break;
+        }
+    }  
+
+    } 
     /*
     if env::var_os("VIRTUAL_ENV").is_some() {
         println!("a")
