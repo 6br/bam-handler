@@ -72,32 +72,38 @@ impl<T: Test> C<T> {
     }
 }
 
-fn calculate_primary<'a, F>(primary: Vec<Record>, fasta_reader: bio::io::fasta::IndexedReader<File>, ref_name: &str, lambda: F) where
-    F: Fn(usize) -> Option<&'a str> {
+fn calculate_primary<'a>(
+    primary: Vec<(Record, Option<&str>, Vec<u8>)>,
+    name: Vec<u8>, //fasta_reader: bio::io::fasta::IndexedReader<File>,
+) {
     let output = io::BufWriter::new(io::stdout());
     let mut header = Header::new();
-    let name = String::from_utf8_lossy(primary[0].name());
+    let name = String::from_utf8_lossy(&name);
     header.push_entry(HeaderEntry::ref_sequence(
         name.to_string(),
-        primary[0].query_len(),
+        primary[0].0.query_len(),
     ));
 
     let mut writer = bam::SamWriter::build().from_stream(output, header).unwrap();
-    for record in primary {
+    for (record, ref_id, ref_seq) in primary {
+        let record = &mut record.clone();
         let mut readable: Vec<u8> = Vec::new();
         record.cigar().write_readable(&mut readable);
         let readable_string = String::from_utf8_lossy(&readable);
         readable_string.replace("D", "Z");
         readable_string.replace("I", "D");
         readable_string.replace("Z", "I");
-        record.cigar().clear();
-        record.cigar().extend_from_text(readable_string.to_string());
+        //record.cigar().clear();
+        let bytes = readable_string.bytes().into_iter();
+        //record.cigar().extend_from_text(bytes);
+        record.set_cigar(bytes);
 
-        let mut ref_seq = vec![];
-        fasta_reader.fetch(lambda(record.ref_id() as usize).unwrap(), record.start() as u64, record.calculate_end() as u64);
-        fasta_reader.read(&mut ref_seq);
-        record.sequence().clear();
-        record.sequence().extend_from_text(ref_seq);
+        // record.sequence().clear();
+        // record.sequence().extend_from_text(ref_seq);
+        record.set_seq_qual(
+            ref_seq,
+            record.qualities().to_readable().into_iter().map(|q| q - 33),
+        );
 
         writer.write(&record).unwrap();
     }
@@ -128,9 +134,12 @@ fn calculate_primary<'a, F>(primary: Vec<Record>, fasta_reader: bio::io::fasta::
             let unique_elements = seq.iter().cloned().unique().collect_vec();
             let mut unique_frequency = vec![];
             for unique_elem in unique_elements.iter() {
-                unique_frequency.push((seq.iter().filter(|&elem| elem == unique_elem).count(), unique_elem));
+                unique_frequency.push((
+                    seq.iter().filter(|&elem| elem == unique_elem).count(),
+                    unique_elem,
+                ));
             }
-            unique_frequency.sort_by_key(|t | t.0);
+            unique_frequency.sort_by_key(|t| t.0);
             print!("{}", unique_frequency[0].1);
         }
         println!("");
@@ -150,21 +159,38 @@ fn main() {
 
     println!("next");
     println!("{}", reader.index());*/
-    let fasta_reader = bio::io::fasta::IndexedReader(args[2].clone());
+    let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(&args[2]).unwrap();
     // let mut read_tree = BTreeMap::new();
-    let mut previous_name = [];
+    // let mut previous_name: &[u8] = &[];
+    let mut previous_name = vec![];
     let mut primary = vec![];
+    let header = reader.header().clone();
+    let closure = |x: u32| header.reference_name(x);
+
     for record in reader {
         let record = record.unwrap();
+        // let closure = |x: u32| reader.header().reference_name(x);
+        let ref_name = closure(record.ref_id() as u32);
+        //let ref_name = &reader.header().reference_name(record.ref_id() as u32);
+        let mut ref_seq = vec![];
+        fasta_reader.fetch(
+            ref_name.unwrap(),
+            record.start() as u64,
+            record.calculate_end() as u64,
+        );
+        fasta_reader.read(&mut ref_seq);
+
         if previous_name != record.name() {
             if !record.flag().is_supplementary() {
                 //read_tree.insert(record);
-                primary.push(record);
+                primary.push((record, ref_name, ref_seq));
             } else {
-                let closure = |x: &str| reader.header().reference_id(x);
+                // let closure = |x: u32| reader.header().reference_name(x);
 
-                calculate_primary(primary, fasta_reader, closure);
-                primary = vec![record];
+                calculate_primary(primary, previous_name);
+                let previous = record.clone();
+                previous_name = previous.name().to_vec().clone();
+                primary = vec![(record, ref_name, ref_seq)];
             }
         }
     }
