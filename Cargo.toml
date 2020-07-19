@@ -7,20 +7,22 @@ keywords = ["bioinformatics", "genome browser"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-name = "rust_test"
-crate-type = ["staticlib", "cdylib"]
+#[lib]
+#name = "rust_test"
+#crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
-#bio = { git = "https://github.com/rust-bio/rust-bio" }
+bio = { git = "https://github.com/rust-bio/rust-bio" }
 bam = { path = "../../../gitlab.com/tprodanov/bam" }
-bitpacking = "0.5" # Pfor
-flate2 = "1.0" # A streaming compression/decompression library
-libbigwig = { git = "https://github.com/6br/libBigWig" } # bigWig
+#bitpacking = "0.5" # Pfor
+#flate2 = "1.0" # A streaming compression/decompression library
+#libbigwig = { git = "https://github.com/6br/libBigWig" } # bigWig
 log = "*"
+itertools = "*"
 regex = "*" 
-rust-htslib = { version = "*", features = ["serde"] } # htsLib
-serde = "*"
-serde_derive = "*"
-serde_json = "*"
-serde_yaml = "*"
+#rust-htslib = { version = "*", features = ["serde"] } # htsLib
+#serde = "*"
+#serde_derive = "*"
+#serde_json = "*"
+#serde_yaml = "*"
+#

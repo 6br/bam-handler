@@ -1,23 +1,25 @@
 #[macro_use]
-extern crate serde_derive;
-#[macro_use]
 extern crate log;
+/*
+#[macro_use]
+extern crate serde_derive;
 
-extern crate serde_json;
-extern crate libbigwig;
 extern crate bitpacking;
+extern crate libbigwig;
 extern crate regex;
-
-pub mod bigbed;
-pub mod range;
-
-use bitpacking::{BitPacker4x, BitPacker};
-use flate2::Compression;
-use flate2::write::ZlibEncoder;
+extern crate serde_json;
+*/
+//pub mod bigbed;
+//pub mod range;
+/*
 use bigbed::libbigbed;
-use range::{Region};
-use bigbed::{Feature};
+use bigbed::Feature;
+use bitpacking::{BitPacker, BitPacker4x};
+use flate2::write::ZlibEncoder;
+use flate2::Compression;
+use range::Region;
 use std::io::prelude::*;
+*/
 /*
   TEST CASES
 0. 普通に呼べるか? -> hello_rust()
@@ -27,7 +29,7 @@ use std::io::prelude::*;
 4. Pfor を外部呼び出しで動作させられるか？ ->  bit_packing()
 
 */
-
+/*
 #[repr(u32)]
 pub enum Foo {
     A = 1,
@@ -36,10 +38,9 @@ pub enum Foo {
 }
 
 #[no_mangle]
-pub extern fn hello_rust() -> *const u8 {
+pub extern "C" fn hello_rust() -> *const u8 {
     "Hello, world!\0".as_ptr()
 }
-
 
 #[no_mangle]
 pub unsafe extern "C" fn print_foo(foo: *const Foo) {
@@ -54,7 +55,7 @@ pub unsafe extern "C" fn print_foo(foo: *const Foo) {
 }
 
 #[no_mangle]
-pub extern fn bit_packing(data: &[u32]) -> Vec<u8> {
+pub extern "C" fn bit_packing(data: &[u32]) -> Vec<u8> {
     let mut original = vec![0u32, data.len() as u32];
     original.copy_from_slice(data);
 
@@ -64,38 +65,34 @@ pub extern fn bit_packing(data: &[u32]) -> Vec<u8> {
     let mut compressed = vec![0u8; 4 * BitPacker4x::BLOCK_LEN];
     let _compressed_len = bitpacker.compress(&original, &mut compressed[..], num_bits);
 
-    return compressed
+    return compressed;
 }
 
 #[no_mangle]
-pub extern fn decrement_start(mut region: Region) -> Region {
+pub extern "C" fn decrement_start(mut region: Region) -> Region {
     region.start_minus();
-    return region
+    return region;
 }
 
 #[no_mangle]
-pub extern fn load_bigbed(path: String, region: Region) -> Vec<Feature> {
-    return libbigbed(
-        path,
-        &region, 
-        "".to_owned(),
-    )
+pub extern "C" fn load_bigbed(path: String, region: Region) -> Vec<Feature> {
+    return libbigbed(path, &region, "".to_owned());
 }
 
 #[no_mangle]
-pub extern fn compress_bytes(words: &[u8]) -> Result<Vec<u8>, std::io::Error> {
+pub extern "C" fn compress_bytes(words: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
     e.write_all(words)?;
     let compressed_bytes = e.finish();
-    return compressed_bytes
+    return compressed_bytes;
 }
 
 #[cfg(test)]
 mod tests {
     use super::libbigwig;
-    use crate::range::{Region};
-    use crate::bigbed::{Feature};
     use crate::bigbed::libbigbed;
+    use crate::bigbed::Feature;
+    use crate::range::Region;
 
     #[test]
     fn it_doesnot_work() {
@@ -116,8 +113,9 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let raw_attr: String = "ENST00000387529\t0\t+\t2712894\t2712894\t0\t1\t104,\t0,\tENSG00000210264\tnull"
-            .to_owned();
+        let raw_attr: String =
+            "ENST00000387529\t0\t+\t2712894\t2712894\t0\t1\t104,\t0,\tENSG00000210264\tnull"
+                .to_owned();
         let attr: Vec<String> = raw_attr.split("\t").map(|s| s.to_string()).collect();
         let feat: Feature = Feature {
             start_offset: 0,
@@ -142,5 +140,5 @@ mod tests {
             )
         );
     }
-
 }
+*/

@@ -1,6 +1,6 @@
+use super::range::Region;
 use libbigwig::*;
-use super::range::{Region};
-use std::ffi::{CString, CStr};
+use std::ffi::{CStr, CString};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Feature {
@@ -31,14 +31,12 @@ pub fn libbigwig_simple(path: String, coord: &Region, prefix: String) -> Vec<Fea
             fp,
             path_str.into_raw(),
             coord.start as u32,
-            coord.stop as u32
+            coord.stop as u32,
         );
         if !intervals.is_null() {
             for i in 0..(*intervals).l {
-                let start_offset =
-                    *(*intervals).start.offset(i as isize) as u64;
-                let stop_offset =
-                    *(*intervals).end.offset(i as isize) as u64;
+                let start_offset = *(*intervals).start.offset(i as isize) as u64;
+                let stop_offset = *(*intervals).end.offset(i as isize) as u64;
                 let value = *(*intervals).value.offset(i as isize);
                 vec.push(Feature {
                     start_offset: start_offset,
@@ -83,12 +81,11 @@ pub fn libbigbed(path: String, coord: &Region, prefix: String) -> Vec<Feature> {
         );
         if !intervals.is_null() {
             for i in 0..(*intervals).l {
-                let start_offset =
-                    if *(*intervals).start.offset(i as isize) <= coord.start as u32 {
-                        0
-                    } else {
-                        *(*intervals).start.offset(i as isize) as u64 - coord.start
-                    };
+                let start_offset = if *(*intervals).start.offset(i as isize) <= coord.start as u32 {
+                    0
+                } else {
+                    *(*intervals).start.offset(i as isize) as u64 - coord.start
+                };
                 let stop_offset = if coord.stop <= *(*intervals).end.offset(i as isize) as u64 {
                     0
                 } else {
@@ -109,7 +106,6 @@ pub fn libbigbed(path: String, coord: &Region, prefix: String) -> Vec<Feature> {
                     value: None,
                 });
             }
-
         }
         if intervals.is_null() {
             bbDestroyOverlappingEntries(intervals);
