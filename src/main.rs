@@ -11,6 +11,7 @@ use std::{
     io,
     process::{Command, Stdio},
 };
+use regex::Regex;
 
 trait Test {
     fn new() -> Self;
@@ -93,10 +94,20 @@ fn calculate_primary<'a>(
         readable_string.replace("D", "Z");
         readable_string.replace("I", "D");
         readable_string.replace("Z", "I");
+        let clipping = Regex::new(r"\d*[H|S]").unwrap();
+        let clip_removed = clipping.replace_all(&readable_string, "");
+
         //record.cigar().clear();
-        let bytes = readable_string.bytes().into_iter();
+        let bytes = clip_removed.bytes().into_iter();
         //record.cigar().extend_from_text(bytes);
+        let record_str = format!("{}:{}-{}", record.ref_id(), record.start(), record.calculate_end());
+        record.set_start(record.cigar().soft_clipping(true) as i32);
         record.set_cigar(bytes);
+        record.tags_mut().remove(b"MD");
+
+        record.set_ref_id(0);
+        record.set_name(record_str.bytes());
+
 
         // record.sequence().clear();
         // record.sequence().extend_from_text(ref_seq);
@@ -107,6 +118,7 @@ fn calculate_primary<'a>(
 
         writer.write(&record).unwrap();
     }
+    eprintln!();
 
     let process = match Command::new("realigner")
         .args(&[name.to_string()])
@@ -159,7 +171,7 @@ fn main() {
 
     println!("next");
     println!("{}", reader.index());*/
-    let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(&args[2]).unwrap();
+    //let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(&args[2]).unwrap();
     // let mut read_tree = BTreeMap::new();
     // let mut previous_name: &[u8] = &[];
     let mut previous_name = vec![];
@@ -173,26 +185,35 @@ fn main() {
         let ref_name = closure(record.ref_id() as u32);
         //let ref_name = &reader.header().reference_name(record.ref_id() as u32);
         let mut ref_seq = vec![];
-        fasta_reader.fetch(
+        /*fasta_reader.fetch(
             ref_name.unwrap(),
             record.start() as u64,
             record.calculate_end() as u64,
         );
-        fasta_reader.read(&mut ref_seq);
+        fasta_reader.read(&mut ref_seq);*/
+        // eprintln!("{:?} {}", record, record.flag().is_supplementary());
+        if previous_name == record.name() {
 
-        if previous_name != record.name() {
             if !record.flag().is_supplementary() {
                 //read_tree.insert(record);
                 primary.push((record, ref_name, ref_seq));
-            } else {
-                // let closure = |x: u32| reader.header().reference_name(x);
-
+            } 
+        } else {
+            // let closure = |x: u32| reader.header().reference_name(x);
+            if primary.len() > 5 {
                 calculate_primary(primary, previous_name);
-                let previous = record.clone();
-                previous_name = previous.name().to_vec().clone();
-                primary = vec![(record, ref_name, ref_seq)];
             }
+            let previous = record.clone();
+            previous_name = previous.name().to_vec().clone();
+            primary = vec![];
+            if !record.flag().is_supplementary() {
+                //read_tree.insert(record);
+                primary.push((record, ref_name, ref_seq));
+            } 
         }
+    }
+    if primary.len() > 5 {
+        calculate_primary(primary, previous_name);
     }
 
     /*
