@@ -171,7 +171,7 @@ fn main() {
 
     println!("next");
     println!("{}", reader.index());*/
-    //let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(&args[2]).unwrap();
+    let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(&args[2]).unwrap();
     // let mut read_tree = BTreeMap::new();
     // let mut previous_name: &[u8] = &[];
     let mut previous_name = vec![];
@@ -185,12 +185,12 @@ fn main() {
         let ref_name = closure(record.ref_id() as u32);
         //let ref_name = &reader.header().reference_name(record.ref_id() as u32);
         let mut ref_seq = vec![];
-        /*fasta_reader.fetch(
+        fasta_reader.fetch(
             ref_name.unwrap(),
             record.start() as u64,
             record.calculate_end() as u64,
         );
-        fasta_reader.read(&mut ref_seq);*/
+        fasta_reader.read(&mut ref_seq);
         // eprintln!("{:?} {}", record, record.flag().is_supplementary());
         if previous_name == record.name() {
 
