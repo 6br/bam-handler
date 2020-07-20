@@ -77,25 +77,46 @@ fn main() {
 
     let region = [("chr1", 121_700_000, 123_400_000), ("chr5", 46100000, 51400000), ("chr19", 24200000, 28100000)];
     let margin = 1_000_000;
+    let result = vec![args[1].clone()];
 
+    let number: i32 = match &args[2].parse() {
+                Ok(n) => {
+                    *n
+                },
+                Err(_) => {
+                    1
+                },
+            };
+    
     for i in region.iter() {
     let chr = i.0; // "chr1";
     let id = reader.header().reference_id(chr).unwrap();
-    let mut btree = BTreeMap::<u32, (i32,i32,i32,u32,u32,u32)>::new();
+    let mut btree = BTreeMap::<u32, (i32,i32,i32,u32,u32,u32,String)>::new();
+    let mut btree2 = BTreeMap::<i32, (i32,i32,i32,u32,u32,u32,String)>::new();
     for record in reader.fetch(&bam::Region::new(id, i.1 - margin, i.2 + margin)).unwrap() {
         let record = record.unwrap();
                     // REF_START, REF_END, REF_LEN, QRY_START, QRY_END, QRY_LEN
-        let tuple = (record.start(), record.calculate_end(), record.calculate_end() - record.start(), record.aligned_query_start(), record.aligned_query_end(), record.query_len());
-        btree.insert(tuple.5, tuple);
+        let tuple = (record.start(), record.calculate_end(), record.calculate_end() - record.start(), record.aligned_query_start(), record.aligned_query_end(), record.query_len(), std::str::from_utf8(&record.name()).unwrap_or("*NAME NOT UTF-8*").to_string());
+        btree.insert(tuple.5, tuple.clone());
+        btree2.insert(tuple.2, tuple);
     }
     let mut index = 0;
+    // result.push(write!("READ_LEN: {}, REF {}:{}-{} (len:{})", key, chr, value.0, value.1, value.2, ))
     for (key, value) in btree.iter().rev() {
         index += 1;
-        println!("READ_LEN: {}, REF {}:{}-{} (len:{})", key, chr, value.0, value.1, value.2);
-        if (index > 9) {
+        println!("{}:, READ_LEN: {}, REF {}:{}-{} (len:{}) {}", args[1], key, chr, value.0, value.1, value.2, value.6);
+        if (index > number) {
             break;
         }
     }  
+    index = 0;
+    for (key, value) in btree2.iter().rev() {
+        index += 1;
+        println!("{}:, READ_LEN: {}, REF {}:{}-{} (len:{}) {}", args[1], key, chr, value.0, value.1, value.2, value.6);
+        if (index > number) {
+            break;
+        }
+    }
 
     } 
     /*

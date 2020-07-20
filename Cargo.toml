@@ -24,3 +24,4 @@ serde = "*"
 serde_derive = "*"
 serde_json = "*"
 serde_yaml = "*"
+plotters = { git = "https://github.com/38/plotters.git" }
