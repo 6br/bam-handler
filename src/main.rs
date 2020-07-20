@@ -89,8 +89,8 @@ fn calculate_primary<'a>(
     Ok(process) => process,
 };
 
-    // let output = io::BufWriter::new(io::stdout());
-    let output = io::BufWriter::new(process.stdin.unwrap());
+     let output = io::BufWriter::new(io::stdout());
+    // let output = io::BufWriter::new(process.stdin.unwrap());
     let mut header = Header::new();
 
     header.push_entry(HeaderEntry::ref_sequence(
