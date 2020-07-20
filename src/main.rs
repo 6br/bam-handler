@@ -77,9 +77,21 @@ fn calculate_primary<'a>(
     primary: Vec<(Record, Option<&str>, Vec<u8>)>,
     name: Vec<u8>, //fasta_reader: bio::io::fasta::IndexedReader<File>,
 ) {
-    let output = io::BufWriter::new(io::stdout());
-    let mut header = Header::new();
     let name = String::from_utf8_lossy(&name);
+    let process = match Command::new("realigner")
+    .args(&[name.to_string()])
+    .stdin(Stdio::piped())
+    .stdout(Stdio::piped())
+    .spawn()
+{
+    Err(why) => panic!("couldn't spawn realigner: {}", why),
+    Ok(process) => process,
+};
+
+    // let output = io::BufWriter::new(io::stdout());
+    let output = io::BufWriter::new(process.stdin.unwrap());
+    let mut header = Header::new();
+
     header.push_entry(HeaderEntry::ref_sequence(
         name.to_string(),
         primary[0].0.query_len(),
@@ -118,17 +130,6 @@ fn calculate_primary<'a>(
 
         writer.write(&record).unwrap();
     }
-    eprintln!();
-
-    let process = match Command::new("realigner")
-        .args(&[name.to_string()])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-    {
-        Err(why) => panic!("couldn't spawn realigner: {}", why),
-        Ok(process) => process,
-    };
 
     let stdout = BufReader::new(process.stdout.unwrap());
     let mut reader = bam::SamReader::from_stream(stdout).unwrap();
