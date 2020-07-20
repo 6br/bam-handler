@@ -291,6 +291,7 @@ fn main() {
                         record.sequence().write_readable(&mut io::stdout());
                     }
                 }
+                println!("");
             }
             let previous = record.clone();
             previous_name = previous.name().to_vec().clone();
