@@ -132,7 +132,7 @@ fn calculate_primary<'a>(
         writer.write(&record).unwrap();
     }
     writer.flush().unwrap();
-    // writer.drop().unwrap();
+    writer.finish().unwrap();
 
     let stdout = BufReader::new(process.stdout.unwrap());
     let mut reader = bam::SamReader::from_stream(stdout).unwrap();
