@@ -133,6 +133,7 @@ fn calculate_primary<'a>(
     }
     writer.flush().unwrap();
     writer.finish().unwrap();
+    std::mem::drop(writer);
 
     let stdout = BufReader::new(process.stdout.unwrap());
     let mut reader = bam::SamReader::from_stream(stdout).unwrap();
