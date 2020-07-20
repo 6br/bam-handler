@@ -312,11 +312,9 @@ fn main() {
                         //record.sequence().write_readable(&mut io::stdout());
                         let seq = record.sequence();
                         if record.flag().is_reverse_strand() {
-                            write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i))).unwrap();
-                            //read = record.sequence().rev_compl(..).collect::<_>();
+                            write_iterator(&mut io::stdout(), revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter()).unwrap();
                         } else {
-                            write_iterator(&mut io::stdout(), (0..seq.len()).rev().map(|i| seq.at(i))).unwrap();
-                            //read = record.sequence().to_vec();
+                            write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i))).unwrap();
                         }
                     }
                 }
@@ -340,11 +338,9 @@ fn main() {
                 //record.sequence().write_readable(&mut io::stdout());
                 let seq = record.sequence();
                 if record.flag().is_reverse_strand() {
-                    write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i))).unwrap();
-                    //read = record.sequence().rev_compl(..).collect::<_>();
+                    write_iterator(&mut io::stdout(), revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter()).unwrap();
                 } else {
-                    write_iterator(&mut io::stdout(), (0..seq.len()).rev().map(|i| seq.at(i))).unwrap();
-                    //read = record.sequence().to_vec();
+                    write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i))).unwrap();
                 }
             }
         }
