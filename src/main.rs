@@ -148,7 +148,7 @@ fn calculate_primary<'a>(
         } else {
             ref_seq
         };
-        eprintln!("{} {}", ref_seq.len(), record.calculate_end() - record.start());
+        // eprintln!("{} {}", ref_seq.len(), record.calculate_end() - record.start());
 
         // record.sequence().clear();
         // record.sequence().extend_from_text(ref_seq);
