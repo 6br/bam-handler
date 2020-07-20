@@ -8,6 +8,7 @@ use io::BufReader;
 use itertools::Itertools;
 use regex::Regex;
 use std::env;
+use bam::RecordReader;
 use std::{
     collections::BTreeMap,
     fs::File,
@@ -77,10 +78,10 @@ impl<T: Test> C<T> {
 
 fn calculate_primary<'a>(
     primary: Vec<(Record, Option<&str>, Vec<u8>)>,
-    name: Vec<u8>, //fasta_reader: bio::io::fasta::IndexedReader<File>,
+    name_vec: Vec<u8>, //fasta_reader: bio::io::fasta::IndexedReader<File>,
     realigner: &str,
 ) {
-    let name = String::from_utf8_lossy(&name);
+    let name = String::from_utf8_lossy(&name_vec);
     let process = match Command::new(realigner)
         .args(&[name.to_string()])
         .stdin(Stdio::piped())
@@ -91,8 +92,8 @@ fn calculate_primary<'a>(
         Ok(process) => process,
     };
 
-    let output = io::BufWriter::new(io::stdout());
-    // let output = io::BufWriter::new(process.stdin.unwrap());
+    // let output = io::BufWriter::new(io::stdout());
+    let output = io::BufWriter::new(process.stdin.unwrap());
     let mut header = Header::new();
 
     header.push_entry(HeaderEntry::ref_sequence(
@@ -114,7 +115,7 @@ fn calculate_primary<'a>(
         for (len, op) in cigar.iter().rev() {
             write!(readable, "{}", len).unwrap();
             readable.write_u8(op.to_byte()).unwrap();
-        } }else {
+        } } else {
         record.cigar().write_readable(&mut readable);
         }
         let readable_string = String::from_utf8_lossy(&readable);
@@ -186,7 +187,27 @@ fn calculate_primary<'a>(
 
     let stdout = BufReader::new(process.stdout.unwrap());
     let mut reader = bam::SamReader::from_stream(stdout).unwrap();
+    
     println!(">{}", name.to_string());
+    let mut record = bam::Record::new();
+    loop {
+    // reader: impl RecordReader
+    // New record is saved into record.
+    match reader.read_into(&mut record) {
+        // No more records to read.
+        Ok(false) => break,
+        Ok(true) => {
+            if record.name() == name_vec.as_slice() {
+                record.sequence().write_readable(&mut io::stdout());
+                println!("");
+            }
+        },
+        Err(e) => panic!("{}", e),
+    }
+    // Do somethind with the record.
+    }
+    /*
+    
     for column in bam::Pileup::with_filter(&mut reader, |record| record.flag().no_bits(1796)) {
         let column = column.unwrap();
         //println!("Column at {}:{}, {} records", column.ref_id(),
@@ -210,6 +231,7 @@ fn calculate_primary<'a>(
         }
         println!("");
     }
+    */
 }
 
 fn main() {
@@ -219,9 +241,13 @@ fn main() {
     let bam_stream = BufReader::with_capacity(1000000, File::open(args[1].clone()).unwrap());
     //let reader = bam::BamReader::from_path(args[1].clone()).unwrap();
     let reader = bam::BamReader::from_stream(bam_stream, 2).unwrap();
+    let x = args.get(4)
+        .and_then(|a| a.parse::<usize>().ok())
+        .unwrap_or(5usize);
     /*for bin in reader.index().references()[0].bins().values() {
         println!("{}\t{}", bin.bin_id(), bin.chunks().len());
     }
+    
 
     println!("next");
     println!("{}", reader.index());*/
@@ -256,8 +282,15 @@ fn main() {
             }
         } else {
             // let closure = |x: u32| reader.header().reference_name(x);
-            if primary.len() > 5 {
+            if primary.len() > x {
                 calculate_primary(primary, previous_name, &args[3]);
+            } else {
+                println!(">{}", String::from_utf8_lossy(&previous_name));
+                for (record,_,_) in primary {
+                    if record.sequence().len() > 0 {
+                        record.sequence().write_readable(&mut io::stdout());
+                    }
+                }
             }
             let previous = record.clone();
             previous_name = previous.name().to_vec().clone();
