@@ -15,6 +15,7 @@ keywords = ["bioinformatics", "genome browser"]
 bio = { git = "https://github.com/rust-bio/rust-bio" }
 bam = { path = "../../../gitlab.com/tprodanov/bam" }
 #bitpacking = "0.5" # Pfor
+byteorder = "*"
 #flate2 = "1.0" # A streaming compression/decompression library
 #libbigwig = { git = "https://github.com/6br/libBigWig" } # bigWig
 log = "*"

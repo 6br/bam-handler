@@ -1,5 +1,6 @@
 extern crate bam;
-
+use byteorder::WriteBytesExt;
+use std::io::Write;
 use bam::Record;
 use bam::{header::HeaderEntry, Header, RecordWriter};
 use bio::alphabets::dna::revcomp;
@@ -103,7 +104,14 @@ fn calculate_primary<'a>(
     for (record, ref_id, ref_seq) in primary {
         let record = &mut record.clone();
         let mut readable: Vec<u8> = Vec::new();
+        let mut cigar = record.cigar();
+        if record.flag().is_reverse_strand() {
+        for (len, op) in cigar.iter().rev() {
+            write!(readable, "{}", len).unwrap();
+            readable.write_u8(op.to_byte()).unwrap();
+        } }else {
         record.cigar().write_readable(&mut readable);
+        }
         let readable_string = String::from_utf8_lossy(&readable);
         let readable_string2 = readable_string.replace("D", "Z");
         let readable_string3 = readable_string2.replace("I", "D");
@@ -123,6 +131,7 @@ fn calculate_primary<'a>(
         // record.set_start(record.cigar().soft_clipping(true) as i32);
         record.set_start(record.cigar().soft_clipping(true) as i32);
         record.set_cigar(bytes);
+
         record.tags_mut().remove(b"MD");
 
         record.set_ref_id(0);
