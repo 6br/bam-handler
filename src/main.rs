@@ -11,7 +11,7 @@ use std::{
     collections::BTreeMap,
     fs::File,
     io,
-    process::{Command, Stdio},
+    process::{Command, Stdio}, iter,
 };
 
 trait Test {
@@ -137,9 +137,11 @@ fn calculate_primary<'a>(
 
         // record.sequence().clear();
         // record.sequence().extend_from_text(ref_seq);
+        //record.reset_seq();
+        //record.set_seq(ref_seq);
         record.set_seq_qual(
             ref_seq,
-            record.qualities().to_readable().into_iter().map(|q| q - 33),
+            iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
         );
 
         writer.write(&record).unwrap();
