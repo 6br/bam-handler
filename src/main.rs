@@ -105,11 +105,11 @@ fn calculate_primary<'a>(
         let mut readable: Vec<u8> = Vec::new();
         record.cigar().write_readable(&mut readable);
         let readable_string = String::from_utf8_lossy(&readable);
-        readable_string.replace("D", "Z");
-        readable_string.replace("I", "D");
-        readable_string.replace("Z", "I");
+        let readable_string2 = readable_string.replace("D", "Z");
+        let readable_string3 = readable_string2.replace("I", "D");
+        let readable_string4 =readable_string3.replace("Z", "I");
         let clipping = Regex::new(r"\d*[H|S]").unwrap();
-        let clip_removed = clipping.replace_all(&readable_string, "");
+        let clip_removed = clipping.replace_all(&readable_string4, "");
 
         //record.cigar().clear();
         let bytes = clip_removed.bytes().into_iter();
@@ -120,6 +120,7 @@ fn calculate_primary<'a>(
             record.start(),
             record.calculate_end()
         );
+        // record.set_start(record.cigar().soft_clipping(true) as i32);
         record.set_start(record.cigar().soft_clipping(true) as i32);
         record.set_cigar(bytes);
         record.tags_mut().remove(b"MD");
@@ -200,7 +201,7 @@ fn main() {
         let record = record.unwrap();
         // let closure = |x: u32| reader.header().reference_name(x);
         let ref_name = closure(record.ref_id() as u32);
-        eprintln!("{:?} {}", ref_name, record.ref_id());
+        // eprintln!("{:?} {}", ref_name, record.ref_id());
         //let ref_name = &reader.header().reference_name(record.ref_id() as u32);
         let mut ref_seq = vec![];
         if let Some(ref_name) = ref_name {
