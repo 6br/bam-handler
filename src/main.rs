@@ -100,7 +100,7 @@ fn calculate_primary<'a>(
         //record.cigar().clear();
         let bytes = clip_removed.bytes().into_iter();
         //record.cigar().extend_from_text(bytes);
-        let record_str = format!("{}:{}-{}", record.ref_id(), record.start(), record.calculate_end());
+        let record_str = format!("{}:{}-{}", ref_id.unwrap(), record.start(), record.calculate_end());
         record.set_start(record.cigar().soft_clipping(true) as i32);
         record.set_cigar(bytes);
         record.tags_mut().remove(b"MD");
