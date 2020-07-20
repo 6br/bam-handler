@@ -87,7 +87,7 @@ fn calculate_primary<'a>(
         .stdout(Stdio::piped())
         .spawn()
     {
-        Err(why) => panic!("couldn't spawn realigner: {}", why),
+        Err(why) => panic!("couldn't spawn {}: {}", realigner, why),
         Ok(process) => process,
     };
 
@@ -101,6 +101,11 @@ fn calculate_primary<'a>(
     ));
 
     let mut writer = bam::SamWriter::build().from_stream(output, header).unwrap();
+
+    // let primary = primary.iter().find(|t| t.seq());
+    let mut read = vec![];
+
+
     for (record, ref_id, ref_seq) in primary {
         let record = &mut record.clone();
         let mut readable: Vec<u8> = Vec::new();
@@ -148,6 +153,13 @@ fn calculate_primary<'a>(
         // record.sequence().extend_from_text(ref_seq);
         //record.reset_seq();
         //record.set_seq(ref_seq);
+        if record.sequence().to_vec().len() > 0 {
+            if record.flag().is_reverse_strand() {
+                read = record.sequence().rev_compl(..).collect::<_>();
+            } else {
+                read = record.sequence().to_vec();
+            }
+        }
         record.set_seq_qual(
             ref_seq,
             iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
@@ -155,6 +167,18 @@ fn calculate_primary<'a>(
 
         writer.write(&record).unwrap();
     }
+
+    let mut record = Record::new();
+    record.set_name(name.bytes());
+    record.set_ref_id(0);
+    record.set_cigar(format!("{}M", read.len()).bytes());
+    record.set_seq_qual(
+        read,
+        iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
+    );
+
+    writer.write(&record).unwrap();
+
     writer.flush().unwrap();
     writer.finish().unwrap();
     std::mem::drop(writer);
