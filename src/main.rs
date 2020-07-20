@@ -2,8 +2,10 @@ extern crate bam;
 
 use bam::Record;
 use bam::{header::HeaderEntry, Header, RecordWriter};
+use bio::alphabets::dna::revcomp;
 use io::BufReader;
 use itertools::Itertools;
+use regex::Regex;
 use std::env;
 use std::{
     collections::BTreeMap,
@@ -11,7 +13,6 @@ use std::{
     io,
     process::{Command, Stdio},
 };
-use regex::Regex;
 
 trait Test {
     fn new() -> Self;
@@ -76,20 +77,20 @@ impl<T: Test> C<T> {
 fn calculate_primary<'a>(
     primary: Vec<(Record, Option<&str>, Vec<u8>)>,
     name: Vec<u8>, //fasta_reader: bio::io::fasta::IndexedReader<File>,
-    realigner: &str
+    realigner: &str,
 ) {
     let name = String::from_utf8_lossy(&name);
     let process = match Command::new(realigner)
-    .args(&[name.to_string()])
-    .stdin(Stdio::piped())
-    .stdout(Stdio::piped())
-    .spawn()
-{
-    Err(why) => panic!("couldn't spawn realigner: {}", why),
-    Ok(process) => process,
-};
+        .args(&[name.to_string()])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+    {
+        Err(why) => panic!("couldn't spawn realigner: {}", why),
+        Ok(process) => process,
+    };
 
-     let output = io::BufWriter::new(io::stdout());
+    let output = io::BufWriter::new(io::stdout());
     // let output = io::BufWriter::new(process.stdin.unwrap());
     let mut header = Header::new();
 
@@ -113,7 +114,12 @@ fn calculate_primary<'a>(
         //record.cigar().clear();
         let bytes = clip_removed.bytes().into_iter();
         //record.cigar().extend_from_text(bytes);
-        let record_str = format!("{}:{}-{}", ref_id.unwrap(), record.start(), record.calculate_end());
+        let record_str = format!(
+            "{}:{}-{}",
+            ref_id.unwrap(),
+            record.start(),
+            record.calculate_end()
+        );
         record.set_start(record.cigar().soft_clipping(true) as i32);
         record.set_cigar(bytes);
         record.tags_mut().remove(b"MD");
@@ -121,6 +127,12 @@ fn calculate_primary<'a>(
         record.set_ref_id(0);
         record.set_name(record_str.bytes());
 
+        let ref_seq = if record.flag().is_reverse_strand() {
+            revcomp(ref_seq)
+        } else {
+            ref_seq
+        };
+        eprintln!("{} {}", ref_seq.len(), record.calculate_end() - record.start());
 
         // record.sequence().clear();
         // record.sequence().extend_from_text(ref_seq);
@@ -188,7 +200,7 @@ fn main() {
         let record = record.unwrap();
         // let closure = |x: u32| reader.header().reference_name(x);
         let ref_name = closure(record.ref_id() as u32);
-        // eprintln!("{:?} {}", ref_name, record.ref_id());
+        eprintln!("{:?} {}", ref_name, record.ref_id());
         //let ref_name = &reader.header().reference_name(record.ref_id() as u32);
         let mut ref_seq = vec![];
         if let Some(ref_name) = ref_name {
@@ -198,14 +210,13 @@ fn main() {
                 record.calculate_end() as u64,
             );
             fasta_reader.read(&mut ref_seq);
-    }
+        }
         // eprintln!("{:?} {}", record, record.flag().is_supplementary());
         if previous_name == record.name() {
-
             if !record.flag().is_supplementary() {
                 //read_tree.insert(record);
                 primary.push((record, ref_name, ref_seq));
-            } 
+            }
         } else {
             // let closure = |x: u32| reader.header().reference_name(x);
             if primary.len() > 5 {
@@ -217,7 +228,7 @@ fn main() {
             if !record.flag().is_supplementary() {
                 //read_tree.insert(record);
                 primary.push((record, ref_name, ref_seq));
-            } 
+            }
         }
     }
     if primary.len() > 5 {
