@@ -76,9 +76,10 @@ impl<T: Test> C<T> {
 fn calculate_primary<'a>(
     primary: Vec<(Record, Option<&str>, Vec<u8>)>,
     name: Vec<u8>, //fasta_reader: bio::io::fasta::IndexedReader<File>,
+    realigner: &str
 ) {
     let name = String::from_utf8_lossy(&name);
-    let process = match Command::new("realigner")
+    let process = match Command::new(realigner)
     .args(&[name.to_string()])
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
@@ -205,7 +206,7 @@ fn main() {
         } else {
             // let closure = |x: u32| reader.header().reference_name(x);
             if primary.len() > 5 {
-                calculate_primary(primary, previous_name);
+                calculate_primary(primary, previous_name, &args[3]);
             }
             let previous = record.clone();
             previous_name = previous.name().to_vec().clone();
@@ -217,7 +218,7 @@ fn main() {
         }
     }
     if primary.len() > 5 {
-        calculate_primary(primary, previous_name);
+        calculate_primary(primary, previous_name, &args[3]);
     }
 
     /*
