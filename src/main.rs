@@ -171,6 +171,7 @@ fn calculate_primary<'a>(
     let mut record = Record::new();
     record.set_name(name.bytes());
     record.set_ref_id(0);
+    record.set_start(0);
     record.set_cigar(format!("{}M", read.len()).bytes());
     record.set_seq_qual(
         read,
