@@ -183,14 +183,17 @@ fn main() {
         let record = record.unwrap();
         // let closure = |x: u32| reader.header().reference_name(x);
         let ref_name = closure(record.ref_id() as u32);
+        // eprintln!("{:?} {}", ref_name, record.ref_id());
         //let ref_name = &reader.header().reference_name(record.ref_id() as u32);
         let mut ref_seq = vec![];
-        fasta_reader.fetch(
-            ref_name.unwrap(),
-            record.start() as u64,
-            record.calculate_end() as u64,
-        );
-        fasta_reader.read(&mut ref_seq);
+        if let Some(ref_name) = ref_name {
+            fasta_reader.fetch(
+                ref_name,
+                record.start() as u64,
+                record.calculate_end() as u64,
+            );
+            fasta_reader.read(&mut ref_seq);
+    }
         // eprintln!("{:?} {}", record, record.flag().is_supplementary());
         if previous_name == record.name() {
 
