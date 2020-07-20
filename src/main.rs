@@ -76,6 +76,27 @@ impl<T: Test> C<T> {
     }
 }
 
+
+pub(crate) fn write_iterator<W, I>(writer: &mut W, mut iterator: I) -> io::Result<()>
+where W: Write,
+      I: Iterator<Item = u8>,
+{
+    const SIZE: usize = 1024;
+    let mut buffer = [0_u8; SIZE];
+    loop {
+        for i in 0..SIZE {
+            match iterator.next() {
+                Some(value) => buffer[i] = value,
+                None => {
+                    return writer.write_all(&buffer[..i]);
+                }
+            }
+        }
+        writer.write_all(&buffer)?;
+    }
+}
+
+
 fn calculate_primary<'a>(
     primary: Vec<(Record, Option<&str>, Vec<u8>)>,
     name_vec: Vec<u8>, //fasta_reader: bio::io::fasta::IndexedReader<File>,
@@ -105,7 +126,7 @@ fn calculate_primary<'a>(
 
     // let primary = primary.iter().find(|t| t.seq());
     let mut read = vec![];
-
+    let len = primary.len();
 
     for (record, ref_id, ref_seq) in primary {
         let record = &mut record.clone();
@@ -188,7 +209,7 @@ fn calculate_primary<'a>(
     let stdout = BufReader::new(process.stdout.unwrap());
     let mut reader = bam::SamReader::from_stream(stdout).unwrap();
     
-    println!(">{}", name.to_string());
+    println!(">{} {}", name.to_string(), len);
     let mut record = bam::Record::new();
     loop {
     // reader: impl RecordReader
@@ -284,11 +305,19 @@ fn main() {
             // let closure = |x: u32| reader.header().reference_name(x);
             if primary.len() > x {
                 calculate_primary(primary, previous_name, &args[3]);
-            } else {
+            } else if primary.len() > 0 {
                 println!(">{}", String::from_utf8_lossy(&previous_name));
                 for (record,_,_) in primary {
                     if record.sequence().len() > 0 {
-                        record.sequence().write_readable(&mut io::stdout());
+                        //record.sequence().write_readable(&mut io::stdout());
+                        let seq = record.sequence();
+                        if record.flag().is_reverse_strand() {
+                            write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i))).unwrap();
+                            //read = record.sequence().rev_compl(..).collect::<_>();
+                        } else {
+                            write_iterator(&mut io::stdout(), (0..seq.len()).rev().map(|i| seq.at(i))).unwrap();
+                            //read = record.sequence().to_vec();
+                        }
                     }
                 }
                 println!("");
@@ -302,8 +331,24 @@ fn main() {
             }
         }
     }
-    if primary.len() > 5 {
+    if primary.len() > x {
         calculate_primary(primary, previous_name, &args[3]);
+    } else {
+        println!(">{}", String::from_utf8_lossy(&previous_name));
+        for (record,_,_) in primary {
+            if record.sequence().len() > 0 {
+                //record.sequence().write_readable(&mut io::stdout());
+                let seq = record.sequence();
+                if record.flag().is_reverse_strand() {
+                    write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i))).unwrap();
+                    //read = record.sequence().rev_compl(..).collect::<_>();
+                } else {
+                    write_iterator(&mut io::stdout(), (0..seq.len()).rev().map(|i| seq.at(i))).unwrap();
+                    //read = record.sequence().to_vec();
+                }
+            }
+        }
+        println!("");
     }
 
     /*
