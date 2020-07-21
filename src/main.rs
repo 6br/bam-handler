@@ -1,19 +1,19 @@
 extern crate bam;
-use byteorder::WriteBytesExt;
-use std::io::Write;
 use bam::Record;
+use bam::RecordReader;
 use bam::{header::HeaderEntry, Header, RecordWriter};
 use bio::alphabets::dna::revcomp;
+use byteorder::WriteBytesExt;
 use io::BufReader;
 use itertools::Itertools;
 use regex::Regex;
 use std::env;
-use bam::RecordReader;
+use std::io::Write;
 use std::{
     collections::BTreeMap,
     fs::File,
-    io,
-    process::{Command, Stdio}, iter,
+    io, iter,
+    process::{Command, Stdio},
 };
 
 trait Test {
@@ -76,10 +76,10 @@ impl<T: Test> C<T> {
     }
 }
 
-
 pub(crate) fn write_iterator<W, I>(writer: &mut W, mut iterator: I) -> io::Result<()>
-where W: Write,
-      I: Iterator<Item = u8>,
+where
+    W: Write,
+    I: Iterator<Item = u8>,
 {
     const SIZE: usize = 1024;
     let mut buffer = [0_u8; SIZE];
@@ -95,7 +95,6 @@ where W: Write,
         writer.write_all(&buffer)?;
     }
 }
-
 
 fn calculate_primary<'a>(
     primary: Vec<(Record, Option<&str>, Vec<u8>)>,
@@ -133,16 +132,17 @@ fn calculate_primary<'a>(
         let mut readable: Vec<u8> = Vec::new();
         let mut cigar = record.cigar();
         if record.flag().is_reverse_strand() {
-        for (len, op) in cigar.iter().rev() {
-            write!(readable, "{}", len).unwrap();
-            readable.write_u8(op.to_byte()).unwrap();
-        } } else {
-        record.cigar().write_readable(&mut readable);
+            for (len, op) in cigar.iter().rev() {
+                write!(readable, "{}", len).unwrap();
+                readable.write_u8(op.to_byte()).unwrap();
+            }
+        } else {
+            record.cigar().write_readable(&mut readable);
         }
         let readable_string = String::from_utf8_lossy(&readable);
         let readable_string2 = readable_string.replace("D", "Z");
         let readable_string3 = readable_string2.replace("I", "D");
-        let readable_string4 =readable_string3.replace("Z", "I");
+        let readable_string4 = readable_string3.replace("Z", "I");
         let clipping = Regex::new(r"\d*[H|S]").unwrap();
         let clip_removed = clipping.replace_all(&readable_string4, "");
 
@@ -208,27 +208,28 @@ fn calculate_primary<'a>(
 
     let stdout = BufReader::new(process.stdout.unwrap());
     let mut reader = bam::SamReader::from_stream(stdout).unwrap();
-    
+
     println!(">{} {}", name.to_string(), len);
+    /*
     let mut record = bam::Record::new();
     loop {
-    // reader: impl RecordReader
-    // New record is saved into record.
-    match reader.read_into(&mut record) {
-        // No more records to read.
-        Ok(false) => break,
-        Ok(true) => {
-            if record.name() == name_vec.as_slice() {
-                record.sequence().write_readable(&mut io::stdout());
-                println!("");
+        // reader: impl RecordReader
+        // New record is saved into record.
+        match reader.read_into(&mut record) {
+            // No more records to read.
+            Ok(false) => break,
+            Ok(true) => {
+                if record.name() == name_vec.as_slice() {
+                    record.sequence().write_readable(&mut io::stdout());
+                    println!("");
+                }
             }
-        },
-        Err(e) => panic!("{}", e),
+            Err(e) => panic!("{}", e),
+        }
+        // Do somethind with the record.
     }
-    // Do somethind with the record.
-    }
-    /*
-    
+    */
+
     for column in bam::Pileup::with_filter(&mut reader, |record| record.flag().no_bits(1796)) {
         let column = column.unwrap();
         //println!("Column at {}:{}, {} records", column.ref_id(),
@@ -252,7 +253,7 @@ fn calculate_primary<'a>(
         }
         println!("");
     }
-    */
+    
 }
 
 fn main() {
@@ -262,13 +263,14 @@ fn main() {
     let bam_stream = BufReader::with_capacity(1000000, File::open(args[1].clone()).unwrap());
     //let reader = bam::BamReader::from_path(args[1].clone()).unwrap();
     let reader = bam::BamReader::from_stream(bam_stream, 2).unwrap();
-    let x = args.get(4)
+    let x = args
+        .get(4)
         .and_then(|a| a.parse::<usize>().ok())
         .unwrap_or(5usize);
     /*for bin in reader.index().references()[0].bins().values() {
         println!("{}\t{}", bin.bin_id(), bin.chunks().len());
     }
-    
+
 
     println!("next");
     println!("{}", reader.index());*/
@@ -307,14 +309,19 @@ fn main() {
                 calculate_primary(primary, previous_name, &args[3]);
             } else if primary.len() > 0 {
                 println!(">{}", String::from_utf8_lossy(&previous_name));
-                for (record,_,_) in primary {
+                for (record, _, _) in primary {
                     if record.sequence().len() > 0 {
                         //record.sequence().write_readable(&mut io::stdout());
                         let seq = record.sequence();
                         if record.flag().is_reverse_strand() {
-                            write_iterator(&mut io::stdout(), revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter()).unwrap();
+                            write_iterator(
+                                &mut io::stdout(),
+                                revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter(),
+                            )
+                            .unwrap();
                         } else {
-                            write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i))).unwrap();
+                            write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i)))
+                                .unwrap();
                         }
                     }
                 }
@@ -333,12 +340,16 @@ fn main() {
         calculate_primary(primary, previous_name, &args[3]);
     } else {
         println!(">{}", String::from_utf8_lossy(&previous_name));
-        for (record,_,_) in primary {
+        for (record, _, _) in primary {
             if record.sequence().len() > 0 {
                 //record.sequence().write_readable(&mut io::stdout());
                 let seq = record.sequence();
                 if record.flag().is_reverse_strand() {
-                    write_iterator(&mut io::stdout(), revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter()).unwrap();
+                    write_iterator(
+                        &mut io::stdout(),
+                        revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter(),
+                    )
+                    .unwrap();
                 } else {
                     write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i))).unwrap();
                 }
