@@ -76,6 +76,42 @@ impl<T: Test> C<T> {
     }
 }
 
+struct RecordIter<'a, I: Iterator<Item = &'a Record>>(I);
+
+impl<'a, I> RecordReader for RecordIter<'a, I>
+where
+    I: Iterator<Item = &'a Record>,
+{
+    fn read_into(&mut self, record: &mut Record) -> std::io::Result<bool> {
+        if let Some(next_record) = self.0.next() {
+            // record = next_record.1;
+            std::mem::replace(record, next_record.clone());
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn pause(&mut self) {}
+}
+
+/// Iterator over records.
+impl<'a, I> Iterator for RecordIter<'a, I>
+where
+    I: Iterator<Item = &'a Record>,
+{
+    type Item = std::io::Result<Record>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut record = Record::new();
+        match self.read_into(&mut record) {
+            Ok(true) => Some(Ok(record)),
+            Ok(false) => None,
+            Err(e) => Some(Err(e)),
+        }
+    }
+}
+
 pub(crate) fn write_iterator<W, I>(writer: &mut W, mut iterator: I) -> io::Result<()>
 where
     W: Write,
@@ -229,8 +265,13 @@ fn calculate_primary<'a>(
         // Do somethind with the record.
     }
     */
+    let mut records = vec![];
+    for i in reader {
+        records.push(i.unwrap());
+    }
+    records.sort_by_key(|i| i.start());
 
-    for column in bam::Pileup::with_filter(&mut reader, |_record| true) {
+    for column in bam::Pileup::with_filter(&mut RecordIter(records.iter()), |_record| true) {
         let column = column.unwrap();
         eprintln!("Column at {}:{}, {} records", column.ref_id(),
             column.ref_pos() + 1, column.entries().len());
