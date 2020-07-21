@@ -230,10 +230,10 @@ fn calculate_primary<'a>(
     }
     */
 
-    for column in bam::Pileup::with_filter(&mut reader, |record| record.flag().no_bits(1796)) {
+    for column in bam::Pileup::with_filter(&mut reader, |_record| true) {
         let column = column.unwrap();
-        //println!("Column at {}:{}, {} records", column.ref_id(),
-        //    column.ref_pos() + 1, column.entries().len());
+        eprintln!("Column at {}:{}, {} records", column.ref_id(),
+            column.ref_pos() + 1, column.entries().len());
 
         for entry in column.entries().iter() {
             let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
