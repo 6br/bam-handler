@@ -273,14 +273,14 @@ fn calculate_primary<'a>(
 
     for column in bam::Pileup::with_filter(&mut RecordIter(records.iter()), |_record| true) {
         let column = column.unwrap();
-        eprintln!("Column at {}:{}, {} records", column.ref_id(),
-            column.ref_pos() + 1, column.entries().len());
+        /*eprintln!("Column at {}:{}, {} records", column.ref_id(),
+            column.ref_pos() + 1, column.entries().len());*/
         let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
         for entry in column.entries().iter() {
             let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
             //let qual: Vec<_> = entry.qualities().unwrap().iter()
             //    .map(|q| (q + 33) as char).collect();
-            eprintln!("    {:?}: {:?}", entry.record(), seq);
+            //eprintln!("    {:?}: {:?}", entry.record(), seq);
             seqs.push(seq);
         }
         let unique_elements = seqs.iter().cloned().unique().collect_vec();
