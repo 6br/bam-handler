@@ -275,25 +275,28 @@ fn calculate_primary<'a>(
         let column = column.unwrap();
         eprintln!("Column at {}:{}, {} records", column.ref_id(),
             column.ref_pos() + 1, column.entries().len());
-
+        let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
         for entry in column.entries().iter() {
             let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
             //let qual: Vec<_> = entry.qualities().unwrap().iter()
             //    .map(|q| (q + 33) as char).collect();
             eprintln!("    {:?}: {:?}", entry.record(), seq);
-            let unique_elements = seq.iter().cloned().unique().collect_vec();
-            let mut unique_frequency = vec![];
-            for unique_elem in unique_elements.iter() {
-                unique_frequency.push((
-                    seq.iter().filter(|&elem| elem == unique_elem).count(),
-                    unique_elem,
-                ));
-            }
-            unique_frequency.sort_by_key(|t| t.0);
-            print!("{}", unique_frequency[0].1);
+            seqs.push(seq);
         }
-        println!("");
+        let unique_elements = seqs.iter().cloned().unique().collect_vec();
+        let mut unique_frequency = vec![];
+        for unique_elem in unique_elements.iter() {
+            unique_frequency.push((
+                seqs.iter().filter(|&elem| elem == unique_elem).count(),
+                unique_elem,
+            ));
+        }
+        unique_frequency.sort_by_key(|t| t.0);
+        if unique_frequency.len() > 0 {
+            print!("{}", unique_frequency[0].1.iter().collect::<String>());
+        }
     }
+    println!("");
     
 }
 
