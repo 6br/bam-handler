@@ -280,7 +280,7 @@ fn calculate_primary<'a>(
             let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
             //let qual: Vec<_> = entry.qualities().unwrap().iter()
             //    .map(|q| (q + 33) as char).collect();
-            //println!("    {:?}: {:?}, {:?}", entry.record(), seq, qual);
+            eprintln!("    {:?}: {:?}, {:?}", entry.record(), seq);
             let unique_elements = seq.iter().cloned().unique().collect_vec();
             let mut unique_frequency = vec![];
             for unique_elem in unique_elements.iter() {
