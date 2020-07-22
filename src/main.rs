@@ -4,7 +4,7 @@ use bam::RecordReader;
 use bam::{header::HeaderEntry, Header, RecordWriter};
 use bio::alphabets::dna::revcomp;
 use byteorder::WriteBytesExt;
-use io::BufReader;
+use io::{Cursor, BufReader};
 use itertools::Itertools;
 use regex::Regex;
 use std::env;
@@ -138,7 +138,7 @@ fn calculate_primary<'a>(
     realigner: &str,
 ) {
     let name = String::from_utf8_lossy(&name_vec);
-    let process = match Command::new(realigner)
+    let mut process = match Command::new(realigner)
         .args(&[name.to_string()])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -147,9 +147,9 @@ fn calculate_primary<'a>(
         Err(why) => panic!("couldn't spawn {}: {}", realigner, why),
         Ok(process) => process,
     };
-
+ {
     // let output = io::BufWriter::new(io::stdout());
-    let output = io::BufWriter::new(process.stdin.unwrap());
+    let output = io::BufWriter::new(process.stdin.as_mut().unwrap());
     let mut header = Header::new();
 
     header.push_entry(HeaderEntry::ref_sequence(
@@ -241,63 +241,70 @@ fn calculate_primary<'a>(
     writer.flush().unwrap();
     writer.finish().unwrap();
     std::mem::drop(writer);
+    //let output = process
+    //.wait_with_output()
+    //.expect("failed to wait on child");
 
-    let stdout = BufReader::new(process.stdout.unwrap());
-    let mut reader = bam::SamReader::from_stream(stdout).unwrap();
-
-    println!(">{} {}", name.to_string(), len);
-    /*
-    let mut record = bam::Record::new();
-    loop {
-        // reader: impl RecordReader
-        // New record is saved into record.
-        match reader.read_into(&mut record) {
-            // No more records to read.
-            Ok(false) => break,
-            Ok(true) => {
-                if record.name() == name_vec.as_slice() {
-                    record.sequence().write_readable(&mut io::stdout());
-                    println!("");
-                }
-            }
-            Err(e) => panic!("{}", e),
-        }
-        // Do somethind with the record.
-    }
-    */
-    let mut records = vec![];
-    for i in reader {
-        records.push(i.unwrap());
-    }
-    records.sort_by_key(|i| i.start());
-
-    for column in bam::Pileup::with_filter(&mut RecordIter(records.iter()), |_record| true) {
-        let column = column.unwrap();
-        /*eprintln!("Column at {}:{}, {} records", column.ref_id(),
-            column.ref_pos() + 1, column.entries().len());*/
-        let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
-        for entry in column.entries().iter() {
-            let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
-            //let qual: Vec<_> = entry.qualities().unwrap().iter()
-            //    .map(|q| (q + 33) as char).collect();
-            //eprintln!("    {:?}: {:?}", entry.record(), seq);
-            seqs.push(seq);
-        }
-        let unique_elements = seqs.iter().cloned().unique().collect_vec();
-        let mut unique_frequency = vec![];
-        for unique_elem in unique_elements.iter() {
-            unique_frequency.push((
-                seqs.iter().filter(|&elem| elem == unique_elem).count(),
-                unique_elem,
-            ));
-        }
-        unique_frequency.sort_by_key(|t| t.0);
-        if unique_frequency.len() > 0 {
-            print!("{}", unique_frequency[0].1.iter().collect::<String>());
-        }
-    }
-    println!("");
     
+        let stdout = BufReader::new(process.stdout.as_mut().unwrap());
+        let mut reader = bam::SamReader::from_stream(stdout).unwrap();
+
+        println!(">{} {}", name.to_string(), len);
+        /*
+        let mut record = bam::Record::new();
+        loop {
+            // reader: impl RecordReader
+            // New record is saved into record.
+            match reader.read_into(&mut record) {
+                // No more records to read.
+                Ok(false) => break,
+                Ok(true) => {
+                    if record.name() == name_vec.as_slice() {
+                        record.sequence().write_readable(&mut io::stdout());
+                        println!("");
+                    }
+                }
+                Err(e) => panic!("{}", e),
+            }
+            // Do somethind with the record.
+        }
+        */
+        let mut records = vec![];
+        for i in reader {
+            records.push(i.unwrap());
+        }
+        records.sort_by_key(|i| i.start());
+
+        for column in bam::Pileup::with_filter(&mut RecordIter(records.iter()), |_record| true) {
+            let column = column.unwrap();
+            /*eprintln!("Column at {}:{}, {} records", column.ref_id(),
+                column.ref_pos() + 1, column.entries().len());*/
+            let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
+            for entry in column.entries().iter() {
+                let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
+                //let qual: Vec<_> = entry.qualities().unwrap().iter()
+                //    .map(|q| (q + 33) as char).collect();
+                //eprintln!("    {:?}: {:?}", entry.record(), seq);
+                seqs.push(seq);
+            }
+            let unique_elements = seqs.iter().cloned().unique().collect_vec();
+            let mut unique_frequency = vec![];
+            for unique_elem in unique_elements.iter() {
+                unique_frequency.push((
+                    seqs.iter().filter(|&elem| elem == unique_elem).count(),
+                    unique_elem,
+                ));
+            }
+            unique_frequency.sort_by_key(|t| t.0);
+            if unique_frequency.len() > 0 {
+                print!("{}", unique_frequency[0].1.iter().collect::<String>());
+            }
+        }
+        println!("");
+        // std::mem::drop(reader);
+    }
+    //stdout.get_mut().wait_with_output().unwrap();
+    process.wait().unwrap();
 }
 
 fn main() {
