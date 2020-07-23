@@ -149,7 +149,7 @@ fn calculate_primary<'a>(
     };
     {
         // let output = io::BufWriter::new(io::stdout());
-        let output = io::BufWriter::new(process.stdin.unwrap());
+        let output = io::BufWriter::new(process.stdin.take().unwrap());
         let mut header = Header::new();
 
         header.push_entry(HeaderEntry::ref_sequence(
@@ -241,15 +241,17 @@ fn calculate_primary<'a>(
         writer.flush().unwrap();
         writer.finish().unwrap();
         std::mem::drop(writer);
+        println!(">{} {}", name.to_string(), len);
+    }
         // std::mem::drop(process.stdin);
         //let output = process
         //.wait_with_output()
         //.expect("failed to wait on child");
 
-        let stdout = BufReader::new(process.stdout.unwrap());
+        let stdout = BufReader::new(process.stdout.get_mut().unwrap());
         let mut reader = bam::SamReader::from_stream(stdout).unwrap();
 
-        println!(">{} {}", name.to_string(), len);
+
         /*
         let mut record = bam::Record::new();
         loop {
@@ -305,9 +307,9 @@ fn calculate_primary<'a>(
         // std::mem::drop(process.stdout);
         // process.wait_with_output().unwrap();
 
-    }
+    
     //stdout.get_mut().wait_with_output().unwrap();
-    //process.wait_with_output().unwrap();
+    process.wait_with_output().unwrap();
 
     // process.kill();
 }
