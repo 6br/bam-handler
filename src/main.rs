@@ -241,6 +241,7 @@ fn calculate_primary<'a>(
         writer.flush().unwrap();
         writer.finish().unwrap();
         std::mem::drop(writer);
+        // std::mem::drop(process.stdin);
         //let output = process
         //.wait_with_output()
         //.expect("failed to wait on child");
@@ -301,9 +302,13 @@ fn calculate_primary<'a>(
         }
         println!("");
         //std::mem::drop(reader);
+        // std::mem::drop(process.stdout);
+        process.wait_with_output().unwrap();
+
     }
     //stdout.get_mut().wait_with_output().unwrap();
-    // process.wait_with_output().unwrap();
+    //process.wait_with_output().unwrap();
+
     // process.kill();
 }
 
