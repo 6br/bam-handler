@@ -304,7 +304,7 @@ fn calculate_primary<'a>(
     }
     //stdout.get_mut().wait_with_output().unwrap();
     // process.wait_with_output().unwrap();
-    process.kill();
+    // process.kill();
 }
 
 fn main() {
