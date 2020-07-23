@@ -248,7 +248,7 @@ fn calculate_primary<'a>(
         //.wait_with_output()
         //.expect("failed to wait on child");
 
-        let stdout = BufReader::new(process.stdout.get_mut().unwrap());
+        let stdout = BufReader::new(process.stdout.take().unwrap());
         let mut reader = bam::SamReader::from_stream(stdout).unwrap();
 
 
