@@ -4,7 +4,7 @@ use bam::RecordReader;
 use bam::{header::HeaderEntry, Header, RecordWriter};
 use bio::alphabets::dna::revcomp;
 use byteorder::WriteBytesExt;
-use io::{Cursor, BufReader};
+use io::{BufReader, Cursor};
 use itertools::Itertools;
 use regex::Regex;
 use std::env;
@@ -147,105 +147,104 @@ fn calculate_primary<'a>(
         Err(why) => panic!("couldn't spawn {}: {}", realigner, why),
         Ok(process) => process,
     };
- {
-    // let output = io::BufWriter::new(io::stdout());
-    let output = io::BufWriter::new(process.stdin.as_mut().unwrap());
-    let mut header = Header::new();
+    {
+        // let output = io::BufWriter::new(io::stdout());
+        let output = io::BufWriter::new(process.stdin.as_mut().unwrap());
+        let mut header = Header::new();
 
-    header.push_entry(HeaderEntry::ref_sequence(
-        name.to_string(),
-        primary[0].0.query_len(),
-    ));
+        header.push_entry(HeaderEntry::ref_sequence(
+            name.to_string(),
+            primary[0].0.query_len(),
+        ));
 
-    let mut writer = bam::SamWriter::build().from_stream(output, header).unwrap();
+        let mut writer = bam::SamWriter::build().from_stream(output, header).unwrap();
 
-    // let primary = primary.iter().find(|t| t.seq());
-    let mut read = vec![];
-    let len = primary.len();
+        // let primary = primary.iter().find(|t| t.seq());
+        let mut read = vec![];
+        let len = primary.len();
 
-    for (record, ref_id, ref_seq) in primary {
-        let record = &mut record.clone();
-        let mut readable: Vec<u8> = Vec::new();
-        let mut cigar = record.cigar();
-        if record.flag().is_reverse_strand() {
-            for (len, op) in cigar.iter().rev() {
-                write!(readable, "{}", len).unwrap();
-                readable.write_u8(op.to_byte()).unwrap();
-            }
-        } else {
-            record.cigar().write_readable(&mut readable);
-        }
-        let readable_string = String::from_utf8_lossy(&readable);
-        let readable_string2 = readable_string.replace("D", "Z");
-        let readable_string3 = readable_string2.replace("I", "D");
-        let readable_string4 = readable_string3.replace("Z", "I");
-        let clipping = Regex::new(r"\d*[H|S]").unwrap();
-        let clip_removed = clipping.replace_all(&readable_string4, "");
-
-        //record.cigar().clear();
-        let bytes = clip_removed.bytes().into_iter();
-        //record.cigar().extend_from_text(bytes);
-        let record_str = format!(
-            "{}:{}-{}",
-            ref_id.unwrap(),
-            record.start(),
-            record.calculate_end()
-        );
-        // record.set_start(record.cigar().soft_clipping(true) as i32);
-        record.set_start(record.cigar().soft_clipping(true) as i32);
-        record.set_cigar(bytes);
-
-        record.tags_mut().remove(b"MD");
-
-        record.set_ref_id(0);
-        record.set_name(record_str.bytes());
-
-        let ref_seq = if record.flag().is_reverse_strand() {
-            revcomp(ref_seq)
-        } else {
-            ref_seq
-        };
-        // eprintln!("{} {}", ref_seq.len(), record.calculate_end() - record.start());
-
-        // record.sequence().clear();
-        // record.sequence().extend_from_text(ref_seq);
-        //record.reset_seq();
-        //record.set_seq(ref_seq);
-        if record.sequence().to_vec().len() > 0 {
+        for (record, ref_id, ref_seq) in primary {
+            let record = &mut record.clone();
+            let mut readable: Vec<u8> = Vec::new();
+            let mut cigar = record.cigar();
             if record.flag().is_reverse_strand() {
-                read = record.sequence().rev_compl(..).collect::<_>();
+                for (len, op) in cigar.iter().rev() {
+                    write!(readable, "{}", len).unwrap();
+                    readable.write_u8(op.to_byte()).unwrap();
+                }
             } else {
-                read = record.sequence().to_vec();
+                record.cigar().write_readable(&mut readable);
             }
+            let readable_string = String::from_utf8_lossy(&readable);
+            let readable_string2 = readable_string.replace("D", "Z");
+            let readable_string3 = readable_string2.replace("I", "D");
+            let readable_string4 = readable_string3.replace("Z", "I");
+            let clipping = Regex::new(r"\d*[H|S]").unwrap();
+            let clip_removed = clipping.replace_all(&readable_string4, "");
+
+            //record.cigar().clear();
+            let bytes = clip_removed.bytes().into_iter();
+            //record.cigar().extend_from_text(bytes);
+            let record_str = format!(
+                "{}:{}-{}",
+                ref_id.unwrap(),
+                record.start(),
+                record.calculate_end()
+            );
+            // record.set_start(record.cigar().soft_clipping(true) as i32);
+            record.set_start(record.cigar().soft_clipping(true) as i32);
+            record.set_cigar(bytes);
+
+            record.tags_mut().remove(b"MD");
+
+            record.set_ref_id(0);
+            record.set_name(record_str.bytes());
+
+            let ref_seq = if record.flag().is_reverse_strand() {
+                revcomp(ref_seq)
+            } else {
+                ref_seq
+            };
+            // eprintln!("{} {}", ref_seq.len(), record.calculate_end() - record.start());
+
+            // record.sequence().clear();
+            // record.sequence().extend_from_text(ref_seq);
+            //record.reset_seq();
+            //record.set_seq(ref_seq);
+            if record.sequence().to_vec().len() > 0 {
+                if record.flag().is_reverse_strand() {
+                    read = record.sequence().rev_compl(..).collect::<_>();
+                } else {
+                    read = record.sequence().to_vec();
+                }
+            }
+            record.set_seq_qual(
+                ref_seq,
+                iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
+            );
+
+            writer.write(&record).unwrap();
         }
+
+        let mut record = Record::new();
+        record.set_name(name.bytes());
+        record.set_ref_id(0);
+        record.set_start(0);
+        record.set_cigar(format!("{}M", read.len()).bytes());
         record.set_seq_qual(
-            ref_seq,
+            read,
             iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
         );
 
         writer.write(&record).unwrap();
-    }
 
-    let mut record = Record::new();
-    record.set_name(name.bytes());
-    record.set_ref_id(0);
-    record.set_start(0);
-    record.set_cigar(format!("{}M", read.len()).bytes());
-    record.set_seq_qual(
-        read,
-        iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
-    );
+        writer.flush().unwrap();
+        writer.finish().unwrap();
+        std::mem::drop(writer);
+        //let output = process
+        //.wait_with_output()
+        //.expect("failed to wait on child");
 
-    writer.write(&record).unwrap();
-
-    writer.flush().unwrap();
-    writer.finish().unwrap();
-    std::mem::drop(writer);
-    //let output = process
-    //.wait_with_output()
-    //.expect("failed to wait on child");
-
-    
         let stdout = BufReader::new(process.stdout.as_mut().unwrap());
         let mut reader = bam::SamReader::from_stream(stdout).unwrap();
 
@@ -278,7 +277,7 @@ fn calculate_primary<'a>(
         for column in bam::Pileup::with_filter(&mut RecordIter(records.iter()), |_record| true) {
             let column = column.unwrap();
             /*eprintln!("Column at {}:{}, {} records", column.ref_id(),
-                column.ref_pos() + 1, column.entries().len());*/
+            column.ref_pos() + 1, column.entries().len());*/
             let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
             for entry in column.entries().iter() {
                 let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
@@ -301,10 +300,11 @@ fn calculate_primary<'a>(
             }
         }
         println!("");
-        // std::mem::drop(reader);
+        //std::mem::drop(reader);
     }
     //stdout.get_mut().wait_with_output().unwrap();
-    process.wait_with_output().unwrap();
+    // process.wait_with_output().unwrap();
+    process.kill();
 }
 
 fn main() {
