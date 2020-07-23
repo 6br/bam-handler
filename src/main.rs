@@ -304,7 +304,7 @@ fn calculate_primary<'a>(
         // std::mem::drop(reader);
     }
     //stdout.get_mut().wait_with_output().unwrap();
-    process.wait().unwrap();
+    process.wait_with_output().unwrap();
 }
 
 fn main() {
