@@ -16,66 +16,6 @@ use std::{
     process::{Command, Stdio},
 };
 
-trait Test {
-    fn new() -> Self;
-}
-
-struct A {
-    data: Vec<u32>,
-}
-
-struct B {
-    data: Vec<i32>,
-}
-
-impl Test for A {
-    fn new() -> A {
-        return A { data: vec![] };
-    }
-}
-
-impl Test for B {
-    fn new() -> B {
-        return B { data: vec![] };
-    }
-}
-
-impl Test3 for B {
-    fn new(&mut self) -> Option<bool> {
-        Some(true)
-    }
-}
-
-trait Test2 {
-    fn new(&mut self) -> Option<bool>;
-    fn to_stream<W: io::Write>(&self, stream: &mut W) -> io::Result<()>;
-    fn from_stream<R: io::Read>(&mut self, stream: &mut R) -> io::Result<bool>;
-}
-
-trait Test3 {
-    fn new(&mut self) -> Option<bool>;
-}
-
-struct D {
-    data: Test3,
-}
-/*
-impl D {
-    pub fn new() -> D {
-        D{data: Test3{}}
-    }
-}
-*/
-struct C<T: Test> {
-    data: T,
-}
-
-impl<T: Test> C<T> {
-    pub fn new() -> C<T> {
-        C { data: T::new() }
-    }
-}
-
 struct RecordIter<'a, I: Iterator<Item = &'a Record>>(I);
 
 impl<'a, I> RecordReader for RecordIter<'a, I>
@@ -132,10 +72,28 @@ where
     }
 }
 
+fn select_base<'a>(
+    read: &'a Vec<char>,
+    seqs: Vec<(usize, &'a Vec<char>)>,
+    alpha: f64, //Here, if 1.5 sigma, mean - 1.5 * stdev
+                //    sigma: f64, // Here, if 1.5 sigma, 1.5 * stdev
+) -> &'a Vec<char> {
+    let d: usize = seqs.iter().map(|t| t.0).sum();
+    let threshold = d as f64 * (1f64 - alpha);
+    let minor = d - seqs[0].0;
+    eprintln!("{}, {}, {}, {:?}", threshold, minor, d, seqs);
+    if minor as f64 <= threshold {
+        return seqs[0].1;
+    } else {
+        return read;
+    }
+}
+
 fn calculate_primary<'a>(
     primary: Vec<(Record, Option<&str>, Vec<u8>)>,
     name_vec: Vec<u8>, //fasta_reader: bio::io::fasta::IndexedReader<File>,
     realigner: &str,
+    alpha: f64,
 ) {
     let name = String::from_utf8_lossy(&name_vec);
     let mut process = match Command::new(realigner)
@@ -243,71 +201,82 @@ fn calculate_primary<'a>(
         std::mem::drop(writer);
         println!(">{} {}", name.to_string(), len);
     }
-        // std::mem::drop(process.stdin);
-        //let output = process
-        //.wait_with_output()
-        //.expect("failed to wait on child");
+    // std::mem::drop(process.stdin);
+    //let output = process
+    //.wait_with_output()
+    //.expect("failed to wait on child");
 
-        let stdout = BufReader::new(process.stdout.take().unwrap());
-        let mut reader = bam::SamReader::from_stream(stdout).unwrap();
+    let stdout = BufReader::new(process.stdout.take().unwrap());
+    let mut reader = bam::SamReader::from_stream(stdout).unwrap();
 
-
-        /*
-        let mut record = bam::Record::new();
-        loop {
-            // reader: impl RecordReader
-            // New record is saved into record.
-            match reader.read_into(&mut record) {
-                // No more records to read.
-                Ok(false) => break,
-                Ok(true) => {
-                    if record.name() == name_vec.as_slice() {
-                        record.sequence().write_readable(&mut io::stdout());
-                        println!("");
-                    }
+    /*
+    let mut record = bam::Record::new();
+    loop {
+        // reader: impl RecordReader
+        // New record is saved into record.
+        match reader.read_into(&mut record) {
+            // No more records to read.
+            Ok(false) => break,
+            Ok(true) => {
+                if record.name() == name_vec.as_slice() {
+                    record.sequence().write_readable(&mut io::stdout());
+                    println!("");
                 }
-                Err(e) => panic!("{}", e),
             }
-            // Do somethind with the record.
+            Err(e) => panic!("{}", e),
         }
-        */
-        let mut records = vec![];
-        for i in reader {
-            records.push(i.unwrap());
-        }
-        records.sort_by_key(|i| i.start());
+        // Do somethind with the record.
+    }
+    */
+    let mut records = vec![];
+    for i in reader {
+        records.push(i.unwrap());
+    }
+    records.sort_by_key(|i| i.start());
 
-        for column in bam::Pileup::with_filter(&mut RecordIter(records.iter()), |_record| true) {
-            let column = column.unwrap();
-            /*eprintln!("Column at {}:{}, {} records", column.ref_id(),
-            column.ref_pos() + 1, column.entries().len());*/
-            let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
-            for entry in column.entries().iter() {
-                let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
-                //let qual: Vec<_> = entry.qualities().unwrap().iter()
-                //    .map(|q| (q + 33) as char).collect();
-                //eprintln!("    {:?}: {:?}", entry.record(), seq);
-                seqs.push(seq);
+    for column in bam::Pileup::with_filter(&mut RecordIter(records.iter()), |_record| true) {
+        let column = column.unwrap();
+        /*eprintln!("Column at {}:{}, {} records", column.ref_id(),
+        column.ref_pos() + 1, column.entries().len());*/
+        let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
+        let mut read = vec![];
+        for entry in column.entries().iter() {
+            if entry.record().name().to_vec() == name_vec {
+                read = entry
+                    .sequence()
+                    .unwrap()
+                    .map(|nt| nt as char)
+                    .collect::<Vec<_>>();
             }
-            let unique_elements = seqs.iter().cloned().unique().collect_vec();
-            let mut unique_frequency = vec![];
-            for unique_elem in unique_elements.iter() {
-                unique_frequency.push((
-                    seqs.iter().filter(|&elem| elem == unique_elem).count(),
-                    unique_elem,
-                ));
-            }
-            unique_frequency.sort_by_key(|t| t.0);
-            if unique_frequency.len() > 0 {
-                print!("{}", unique_frequency[0].1.iter().collect::<String>());
-            }
+            let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
+            //let qual: Vec<_> = entry.qualities().unwrap().iter()
+            //    .map(|q| (q + 33) as char).collect();
+            //eprintln!("    {:?}: {:?}", entry.record(), seq);
+            seqs.push(seq);
         }
-        println!("");
-        //std::mem::drop(reader);
-        // std::mem::drop(process.stdout);
-        // process.wait_with_output().unwrap();
+        let unique_elements = seqs.iter().cloned().unique().collect_vec();
+        let mut unique_frequency = vec![];
+        for unique_elem in unique_elements.iter() {
+            unique_frequency.push((
+                seqs.iter().filter(|&elem| elem == unique_elem).count(),
+                unique_elem,
+            ));
+        }
+        unique_frequency.sort_by_key(|t| t.0);
+        if unique_frequency.len() > 0 {
+            print!(
+                "{}",
+                select_base(&read, unique_frequency, alpha)
+                    .iter()
+                    .collect::<String>()
+            );
+        }
+    }
+    println!("");
+    //std::mem::drop(reader);
+    // std::mem::drop(process.stdout);
+    // process.wait_with_output().unwrap();
 
-    
     //stdout.get_mut().wait_with_output().unwrap();
     process.wait_with_output().unwrap();
 
@@ -325,6 +294,14 @@ fn main() {
         .get(4)
         .and_then(|a| a.parse::<usize>().ok())
         .unwrap_or(5usize);
+    let alpha = args
+        .get(5)
+        .and_then(|a| a.parse::<f64>().ok())
+        .unwrap_or(0.85);
+    let sigma = args
+        .get(6)
+        .and_then(|a| a.parse::<f64>().ok())
+        .unwrap_or(0.075);
     /*for bin in reader.index().references()[0].bins().values() {
         println!("{}\t{}", bin.bin_id(), bin.chunks().len());
     }
@@ -364,7 +341,7 @@ fn main() {
         } else {
             // let closure = |x: u32| reader.header().reference_name(x);
             if primary.len() > x {
-                calculate_primary(primary, previous_name, &args[3]);
+                calculate_primary(primary, previous_name, &args[3], alpha - sigma);
             } else if primary.len() > 0 {
                 println!(">{}", String::from_utf8_lossy(&previous_name));
                 for (record, _, _) in primary {
@@ -395,7 +372,7 @@ fn main() {
         }
     }
     if primary.len() > x {
-        calculate_primary(primary, previous_name, &args[3]);
+        calculate_primary(primary, previous_name, &args[3], alpha - sigma);
     } else {
         println!(">{}", String::from_utf8_lossy(&previous_name));
         for (record, _, _) in primary {
