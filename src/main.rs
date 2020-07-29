@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate log;
 extern crate bam;
 use bam::Record;
 use bam::RecordReader;
@@ -81,7 +83,7 @@ fn select_base<'a>(
     let d: usize = seqs.iter().map(|t| t.0).sum();
     let threshold = d as f64 * (1f64 - alpha);
     let minor = d - seqs[0].0;
-    eprintln!("{}, {}, {}, {:?},  {:?}", threshold, minor, d, read, seqs);
+    //eprintln!("{}, {}, {}, {:?},  {:?}", threshold, minor, d, read, seqs);
     if minor as f64 <= threshold {
         return seqs[0].1;
     } else {
