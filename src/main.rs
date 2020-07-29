@@ -81,7 +81,7 @@ fn select_base<'a>(
     let d: usize = seqs.iter().map(|t| t.0).sum();
     let threshold = d as f64 * (1f64 - alpha);
     let minor = d - seqs[0].0;
-    eprintln!("{}, {}, {}, {:?}", threshold, minor, d, seqs);
+    //eprintln!("{}, {}, {}, {:?}", threshold, minor, d, seqs);
     if minor as f64 <= threshold {
         return seqs[0].1;
     } else {
@@ -263,6 +263,7 @@ fn calculate_primary<'a>(
             ));
         }
         unique_frequency.sort_by_key(|t| t.0);
+        unique_frequency.reverse();
         if unique_frequency.len() > 0 {
             print!(
                 "{}",
