@@ -84,6 +84,7 @@ fn select_base<'a>(
     let threshold = d as f64 * (1f64 - alpha);
     let minor = d - seqs[0].0;
     //eprintln!("{}, {}, {}, {:?},  {:?}", threshold, minor, d, read, seqs);
+    eprintln!("Agg:\t{}\t{}\t{}\t{}\t{}", d, seqs[0].0, minor, seqs[0].0 as f64 / d as f64, minor as f64 / d as f64);
     if minor as f64 <= threshold {
         return seqs[0].1;
     } else {
