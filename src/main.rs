@@ -6,13 +6,12 @@ use bam::RecordReader;
 use bam::{header::HeaderEntry, Header, RecordWriter};
 use bio::alphabets::dna::revcomp;
 use byteorder::WriteBytesExt;
-use io::{BufReader, Cursor};
+use io::BufReader;
 use itertools::Itertools;
 use regex::Regex;
 use std::env;
 use std::io::Write;
 use std::{
-    collections::BTreeMap,
     fs::File,
     io, iter,
     process::{Command, Stdio},
