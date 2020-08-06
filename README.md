@@ -1,5 +1,5 @@
-# SA-attatcher
-Atatch 
+# SA-attacher
+Attach 
 
 ### USAGE
 
