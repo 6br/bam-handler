@@ -31,6 +31,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06e97b4e522f9e55523001238ac59d13a8603af57f69980de5d8de4bbbe8ada6"
 
 [[package]]
+name = "attachsa"
+version = "0.1.0"
+dependencies = [
+ "bam",
+ "bio",
+ "byteorder",
+ "itertools",
+ "log",
+ "regex",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -609,18 +621,6 @@ name = "regex-syntax"
 version = "0.6.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26412eb97c6b088a6997e05f69403a802a92d520de2f8e63c2b65f9e0f47c4e8"
-
-[[package]]
-name = "rust_test"
-version = "0.1.0"
-dependencies = [
- "bam",
- "bio",
- "byteorder",
- "itertools",
- "log",
- "regex",
-]
 
 [[package]]
 name = "rustc_version"

@@ -1,7 +1,13 @@
 # SA-attacher
-Attach 
+
+Attach SA-tag in bam file from the output of LAST-split
+
+(Under development; we don't gua)
 
 ### USAGE
+
+```bash
+cargo build --release
 
 ```
 
