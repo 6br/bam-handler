@@ -2,13 +2,13 @@
 
 Attach SA-tag in bam file from the output of LAST-split
 
-(Under development; we don't gua)
+(Under development; no guarantee)
 
-### USAGE
+## USAGE
 
 ```bash
 cargo build --release
-
+cargo run --release -- /* input.bam */ dummy.fa > /* output.bam */
 ```
 
 ```bash
