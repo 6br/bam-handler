@@ -3,7 +3,11 @@ extern crate log;
 extern crate bam;
 use bam::Record;
 use bam::RecordReader;
-use bam::{header::HeaderEntry, Header, RecordWriter};
+use bam::{
+    header::HeaderEntry,
+    record::tags::{StringType, TagValue},
+    Header, RecordWriter,
+};
 use bio::alphabets::dna::revcomp;
 use byteorder::WriteBytesExt;
 use io::BufReader;
@@ -83,12 +87,78 @@ fn select_base<'a>(
     let threshold = d as f64 * (1f64 - alpha);
     let minor = d - seqs[0].0;
     //eprintln!("{}, {}, {}, {:?},  {:?}", threshold, minor, d, read, seqs);
-    eprintln!("Agg:\t{}\t{}\t{}\t{}\t{}", d, seqs[0].0, minor, seqs[0].0 as f64 / d as f64, minor as f64 / d as f64);
+    eprintln!(
+        "Agg:\t{}\t{}\t{}\t{}\t{}",
+        d,
+        seqs[0].0,
+        minor,
+        seqs[0].0 as f64 / d as f64,
+        minor as f64 / d as f64
+    );
     if minor as f64 <= threshold {
         return seqs[0].1;
     } else {
         return read;
     }
+}
+
+fn calculate_sam<'a, F>(primary: Vec<(Record, Option<&str>, Vec<u8>)>, lambda: F) -> Vec<Record>
+where
+    F: Fn(u32) -> Option<&'a str>,
+{
+    let mut primary = primary.clone();
+    primary.sort_by(|a, b| {
+        (a.0.cigar().soft_clipping(!a.0.flag().is_reverse_strand())
+            + a.0.cigar().hard_clipping(!a.0.flag().is_reverse_strand()))
+        .cmp(
+            &((b.0.cigar().soft_clipping(!b.0.flag().is_reverse_strand()))
+                + (b.0.cigar().hard_clipping(!b.0.flag().is_reverse_strand()))),
+        )
+    });
+    let cigars = primary
+        .iter()
+        .map(|t| {
+            let mut readable: Vec<u8> = Vec::new();
+            t.0.cigar().write_readable(&mut readable);
+            // readable
+            //readable
+            let strand = if t.0.flag().is_reverse_strand() {
+                "-"
+            } else {
+                "+"
+            };
+            let nm = match t.0.tags().get(b"NM") {
+                Some(TagValue::String(array_view, StringType::String)) => array_view,
+                _ => &[],
+            };
+            [
+                lambda(t.0.ref_id() as u32).unwrap(),
+                &t.0.start().to_string(),
+                strand,
+                &String::from_utf8_lossy(&readable),
+                &t.0.mapq().to_string(),
+                &String::from_utf8_lossy(&nm),
+            ]
+            .join(",")
+        })
+        .collect::<Vec<_>>();
+    primary
+        .into_iter()
+        .enumerate()
+        .map(|(i, mut t)| {
+            t.0.tags_mut().push_string(
+                b"SA",
+                cigars
+                    .iter()
+                    .enumerate()
+                    .filter(|t| t.0 != i)
+                    .map(|t| t.1)
+                    .join(";")
+                    .as_bytes(),
+            );
+            t.0
+        })
+        .collect::<Vec<_>>()
 }
 
 fn calculate_primary<'a>(
@@ -313,6 +383,11 @@ fn main() {
     println!("next");
     println!("{}", reader.index());*/
     let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(&args[2]).unwrap();
+    let sa_merge = args.len() <= 2;
+    let mut writer = bam::BamWriter::build()
+        .write_header(true)
+        .from_stream(std::io::stdout(), reader.header().clone())
+        .unwrap();
     // let mut read_tree = BTreeMap::new();
     // let mut previous_name: &[u8] = &[];
     let mut previous_name = vec![];
@@ -344,26 +419,41 @@ fn main() {
         } else {
             // let closure = |x: u32| reader.header().reference_name(x);
             if primary.len() > x {
-                calculate_primary(primary, previous_name, &args[3], alpha - sigma);
+                if sa_merge {
+                    for i in calculate_sam(primary, closure) {
+                        writer.write(&i).unwrap();
+                    }
+                } else {
+                    calculate_primary(primary, previous_name, &args[3], alpha - sigma);
+                }
             } else if primary.len() > 0 {
-                println!(">{}", String::from_utf8_lossy(&previous_name));
-                for (record, _, _) in primary {
-                    if record.sequence().len() > 0 {
-                        //record.sequence().write_readable(&mut io::stdout());
-                        let seq = record.sequence();
-                        if record.flag().is_reverse_strand() {
-                            write_iterator(
-                                &mut io::stdout(),
-                                revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter(),
-                            )
-                            .unwrap();
-                        } else {
-                            write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i)))
+                if sa_merge {
+                    for i in calculate_sam(primary, closure) {
+                        writer.write(&i).unwrap();
+                    }
+                } else {
+                    println!(">{}", String::from_utf8_lossy(&previous_name));
+                    for (record, _, _) in primary {
+                        if record.sequence().len() > 0 {
+                            //record.sequence().write_readable(&mut io::stdout());
+                            let seq = record.sequence();
+                            if record.flag().is_reverse_strand() {
+                                write_iterator(
+                                    &mut io::stdout(),
+                                    revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter(),
+                                )
                                 .unwrap();
+                            } else {
+                                write_iterator(
+                                    &mut io::stdout(),
+                                    (0..seq.len()).map(|i| seq.at(i)),
+                                )
+                                .unwrap();
+                            }
                         }
                     }
+                    println!("");
                 }
-                println!("");
             }
             let previous = record.clone();
             previous_name = previous.name().to_vec().clone();
@@ -374,26 +464,33 @@ fn main() {
             }
         }
     }
-    if primary.len() > x {
-        calculate_primary(primary, previous_name, &args[3], alpha - sigma);
+    if sa_merge {
+        for i in calculate_sam(primary, closure) {
+            writer.write(&i).unwrap();
+        }
     } else {
-        println!(">{}", String::from_utf8_lossy(&previous_name));
-        for (record, _, _) in primary {
-            if record.sequence().len() > 0 {
-                //record.sequence().write_readable(&mut io::stdout());
-                let seq = record.sequence();
-                if record.flag().is_reverse_strand() {
-                    write_iterator(
-                        &mut io::stdout(),
-                        revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter(),
-                    )
-                    .unwrap();
-                } else {
-                    write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i))).unwrap();
+        if primary.len() > x {
+            calculate_primary(primary, previous_name, &args[3], alpha - sigma);
+        } else {
+            println!(">{}", String::from_utf8_lossy(&previous_name));
+            for (record, _, _) in primary {
+                if record.sequence().len() > 0 {
+                    //record.sequence().write_readable(&mut io::stdout());
+                    let seq = record.sequence();
+                    if record.flag().is_reverse_strand() {
+                        write_iterator(
+                            &mut io::stdout(),
+                            revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter(),
+                        )
+                        .unwrap();
+                    } else {
+                        write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i)))
+                            .unwrap();
+                    }
                 }
             }
+            println!("");
         }
-        println!("");
     }
 
     /*

@@ -13,7 +13,7 @@ keywords = ["bioinformatics", "genome browser"]
 
 [dependencies]
 bio = { git = "https://github.com/rust-bio/rust-bio" }
-bam = { path = "../../../gitlab.com/tprodanov/bam" }
+bam = { git = "https://github.com/6br/bam" }
 #bitpacking = "0.5" # Pfor
 byteorder = "*"
 #flate2 = "1.0" # A streaming compression/decompression library
