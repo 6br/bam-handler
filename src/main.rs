@@ -123,8 +123,7 @@ where
         .map(|t| {
             let mut readable: Vec<u8> = Vec::new();
             t.0.cigar().write_readable(&mut readable);
-            // readable
-            //readable
+
             let strand = if t.0.flag().is_reverse_strand() {
                 "-"
             } else {
@@ -134,7 +133,7 @@ where
                 Some(TagValue::String(array_view, StringType::String)) => array_view,
                 _ => &[],
             };
-            // eprintln!("{} {:?}", t.0.ref_id(), t);
+
             [
                 lambda(t.0.ref_id() as u32).unwrap(),
                 &t.0.start().to_string(),
@@ -285,25 +284,6 @@ fn calculate_primary<'a>(
     let stdout = BufReader::new(process.stdout.take().unwrap());
     let mut reader = bam::SamReader::from_stream(stdout).unwrap();
 
-    /*
-    let mut record = bam::Record::new();
-    loop {
-        // reader: impl RecordReader
-        // New record is saved into record.
-        match reader.read_into(&mut record) {
-            // No more records to read.
-            Ok(false) => break,
-            Ok(true) => {
-                if record.name() == name_vec.as_slice() {
-                    record.sequence().write_readable(&mut io::stdout());
-                    println!("");
-                }
-            }
-            Err(e) => panic!("{}", e),
-        }
-        // Do somethind with the record.
-    }
-    */
     let mut records = vec![];
     for i in reader {
         records.push(i.unwrap());
@@ -350,9 +330,6 @@ fn calculate_primary<'a>(
         }
     }
     println!("");
-    //std::mem::drop(reader);
-    // std::mem::drop(process.stdout);
-    // process.wait_with_output().unwrap();
 
     //stdout.get_mut().wait_with_output().unwrap();
     process.wait_with_output().unwrap();
@@ -381,21 +358,14 @@ fn main() {
         .unwrap_or(0.075);
     let dummy = "/dev/null".to_string();
     let path = args.get(2).unwrap_or(&dummy);
-    /*for bin in reader.index().references()[0].bins().values() {
-        println!("{}\t{}", bin.bin_id(), bin.chunks().len());
-    }
 
-
-    println!("next");
-    println!("{}", reader.index());*/
     let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(path).unwrap();
     let sa_merge = args.len() <= 3;
     let mut writer = bam::BamWriter::build()
         .write_header(true)
         .from_stream(std::io::stdout(), reader.header().clone())
         .unwrap();
-    // let mut read_tree = BTreeMap::new();
-    // let mut previous_name: &[u8] = &[];
+
     let mut previous_name = vec![];
     let mut primary = vec![];
     let header = reader.header().clone();
@@ -419,11 +389,9 @@ fn main() {
         // eprintln!("{:?} {}", record, record.flag().is_supplementary());
         if previous_name == record.name() {
             if !record.flag().is_supplementary() {
-                //read_tree.insert(record);
                 primary.push((record, ref_name, ref_seq));
             }
         } else {
-            // let closure = |x: u32| reader.header().reference_name(x);
             if primary.len() > x {
                 if sa_merge {
                     for i in calculate_sam(primary, closure) {
@@ -441,7 +409,6 @@ fn main() {
                     println!(">{}", String::from_utf8_lossy(&previous_name));
                     for (record, _, _) in primary {
                         if record.sequence().len() > 0 {
-                            //record.sequence().write_readable(&mut io::stdout());
                             let seq = record.sequence();
                             if record.flag().is_reverse_strand() {
                                 write_iterator(
@@ -498,14 +465,4 @@ fn main() {
             println!("");
         }
     }
-
-    /*
-    if env::var_os("VIRTUAL_ENV").is_some() {
-        println!("a")
-    } else {
-        println!("b")
-    }
-    let k: C<B> = C::new();
-    */
-    //let k2 = D{data: B};
 }
