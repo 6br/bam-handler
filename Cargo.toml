@@ -1,5 +1,5 @@
 [package]
-name = "rust_test"
+name = "attachsa"
 version = "0.1.0"
 authors = ["6br <tfdvrt@gmail.com>"]
 edition = "2018"
@@ -13,8 +13,9 @@ keywords = ["bioinformatics", "genome browser"]
 
 [dependencies]
 bio = { git = "https://github.com/rust-bio/rust-bio" }
-bam = { path = "../../../gitlab.com/tprodanov/bam" }
+bam = { git = "https://github.com/6br/bam" }
 #bitpacking = "0.5" # Pfor
+byteorder = "*"
 #flate2 = "1.0" # A streaming compression/decompression library
 #libbigwig = { git = "https://github.com/6br/libBigWig" } # bigWig
 log = "*"
