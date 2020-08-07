@@ -379,7 +379,8 @@ fn main() {
         .get(6)
         .and_then(|a| a.parse::<f64>().ok())
         .unwrap_or(0.075);
-    let path = args.get(2).unwrap_or("/dev/null")
+    let dummy = "/dev/null".to_string();
+    let path = args.get(2).unwrap_or(&dummy);
     /*for bin in reader.index().references()[0].bins().values() {
         println!("{}\t{}", bin.bin_id(), bin.chunks().len());
     }
