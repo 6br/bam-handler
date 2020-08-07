@@ -377,6 +377,7 @@ fn main() {
         // eprintln!("{:?} {}", ref_name, record.ref_id());
         //let ref_name = &reader.header().reference_name(record.ref_id() as u32);
         let mut ref_seq = vec![];
+        if !sa_merge{
         if let Some(ref_name) = ref_name {
             let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(path).unwrap();
             fasta_reader.fetch(
@@ -386,6 +387,7 @@ fn main() {
             );
             fasta_reader.read(&mut ref_seq);
         }
+    }
         // eprintln!("{:?} {}", record, record.flag().is_supplementary());
         if previous_name == record.name() {
             if !record.flag().is_supplementary() {
