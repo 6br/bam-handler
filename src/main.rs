@@ -107,8 +107,8 @@ where
     F: Fn(u32) -> Option<&'a str>,
 {
     let mut primary = primary.clone();
-    if primary.iter().all(|t| t.0.ref_id() == 1 ) {
-        return primary.into_iter().map(|t| t.0).collect::<Vec<_>>()
+    if primary.iter().all(|t| t.0.ref_id() == 1) {
+        return primary.into_iter().map(|t| t.0).collect::<Vec<_>>();
     }
     primary.sort_by(|a, b| {
         (a.0.cigar().soft_clipping(!a.0.flag().is_reverse_strand())
@@ -379,6 +379,7 @@ fn main() {
         .get(6)
         .and_then(|a| a.parse::<f64>().ok())
         .unwrap_or(0.075);
+    let path = args.get(2).unwrap_or("/dev/null")
     /*for bin in reader.index().references()[0].bins().values() {
         println!("{}\t{}", bin.bin_id(), bin.chunks().len());
     }
@@ -386,7 +387,7 @@ fn main() {
 
     println!("next");
     println!("{}", reader.index());*/
-    let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(&args[2]).unwrap();
+    let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(path).unwrap();
     let sa_merge = args.len() <= 3;
     let mut writer = bam::BamWriter::build()
         .write_header(true)
