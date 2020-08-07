@@ -356,10 +356,9 @@ fn main() {
         .get(6)
         .and_then(|a| a.parse::<f64>().ok())
         .unwrap_or(0.075);
-    let dummy = "/dev/null".to_string();
+    let dummy = "dummy.fa".to_string();
     let path = args.get(2).unwrap_or(&dummy);
 
-    let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(path).unwrap();
     let sa_merge = args.len() <= 3;
     let mut writer = bam::BamWriter::build()
         .write_header(true)
@@ -379,6 +378,7 @@ fn main() {
         //let ref_name = &reader.header().reference_name(record.ref_id() as u32);
         let mut ref_seq = vec![];
         if let Some(ref_name) = ref_name {
+            let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(path).unwrap();
             fasta_reader.fetch(
                 ref_name,
                 record.start() as u64,
