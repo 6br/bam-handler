@@ -343,22 +343,26 @@ fn bam_stats(path: String) {
     let mut total_read_length = 0;
     let mut total_primary_aligned_read_length = 0;
     let mut unaligned_length = 0;
+    let mut primary_alignment = 0;
+    let mut unaligned_reads = 0;
 
     for record in reader {
         let record = record.unwrap();
         if !record.flag().is_secondary() && !record.flag().is_supplementary() {
             //let read_original_length = record.
-            total_read_length += record.query_len();
+            total_read_length += record.query_len() + record.cigar().hard_clipping(true) + record.cigar().hard_clipping(false);
             total_primary_aligned_read_length += record.aligned_query_end() - record.aligned_query_start();
+            primary_alignment += 1;
         } else if !record.flag().is_mapped()
         {
             total_read_length += record.query_len();
             unaligned_length += record.query_len();
+            unaligned_reads += 1;
         }
     }
-
-    println!("Total read length\t{}\nAligned read length\t{}\nUnaligned_length\t{}\nPrimary alignment ratio\t{}",
-     total_read_length, total_primary_aligned_read_length, unaligned_length, total_primary_aligned_read_length as f32 / total_read_length as f32 * 100.0);
+    println!("Total read length\t{}\nAligned length\t{}\nUnaligned_length\t{}\nPrimary alignment ratio\t{}",
+     total_read_length, total_primary_aligned_read_length, unaligned_length, total_primary_aligned_read_length as f32 / total_read_length as f32);
+    println!("# of primary alignment\t{}\n# of unaligned reads\t{}", primary_alignment, unaligned_reads);
     return
 }
 
@@ -371,12 +375,12 @@ fn main() {
     let realigner = command == "realign";
     let stats = command == "stats";
     if !sa_merge && !realigner && !stats {
-        let string = "bam-handler
+        let string = "    bam-handler
         
-        USAGE:
+    USAGE:
         bam-handler <SUBCOMMAND>
 
-        SUBCOMMANDS:
+    SUBCOMMANDS:
         attatchsa Attach SA-tag in bam file from an output of LAST-split.
         realign   Realign aligned reads in bam file.
         stats     Collects statistics from a BAM file.
