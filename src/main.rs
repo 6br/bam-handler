@@ -360,8 +360,8 @@ fn bam_stats(path: String) {
             unaligned_reads += 1;
         }
     }
-    println!("Total read length\t{}\nAligned length\t{}\nUnaligned_length\t{}\nPrimary alignment ratio\t{}",
-     total_read_length, total_primary_aligned_read_length, unaligned_length, total_primary_aligned_read_length as f32 / total_read_length as f32);
+    println!("Total read length\t{}\nAligned length\t{}\nUnaligned_length\t{}\nPrimary alignment ratio\t{}\nPrimary alignment ratio with unaligned\t{}",
+     total_read_length, total_primary_aligned_read_length, unaligned_length, total_primary_aligned_read_length as f64 / total_read_length as f64, total_primary_aligned_read_length as f64 / (total_read_length + unaligned_length) as f64);
     println!("# of primary alignment\t{}\n# of unaligned reads\t{}", primary_alignment, unaligned_reads);
     return
 }
