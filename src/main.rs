@@ -199,7 +199,7 @@ fn calculate_primary<'a>(
         for (record, ref_id, ref_seq) in primary {
             let record = &mut record.clone();
             let mut readable: Vec<u8> = Vec::new();
-            let mut cigar = record.cigar();
+            let cigar = record.cigar();
             if record.flag().is_reverse_strand() {
                 for (len, op) in cigar.iter().rev() {
                     write!(readable, "{}", len).unwrap();
@@ -282,7 +282,7 @@ fn calculate_primary<'a>(
     //.expect("failed to wait on child");
 
     let stdout = BufReader::new(process.stdout.take().unwrap());
-    let mut reader = bam::SamReader::from_stream(stdout).unwrap();
+    let reader = bam::SamReader::from_stream(stdout).unwrap();
 
     let mut records = vec![];
     for i in reader {
@@ -355,7 +355,7 @@ fn bam_stats(path: String) {
             primary_alignment += 1;
         } else if !record.flag().is_mapped()
         {
-            total_read_length += record.query_len();
+            // total_read_length += record.query_len();
             unaligned_length += record.query_len();
             unaligned_reads += 1;
         }
