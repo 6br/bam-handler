@@ -340,9 +340,9 @@ fn calculate_primary<'a>(
 fn bam_stats(path: String) {
     let bam_stream = BufReader::with_capacity(1000000, File::open(path).unwrap());
     let reader = bam::BamReader::from_stream(bam_stream, 2).unwrap();
-    let mut total_read_length = 0;
-    let mut total_primary_aligned_read_length = 0;
-    let mut unaligned_length = 0;
+    let mut total_read_length: u64 = 0;
+    let mut total_primary_aligned_read_length: u64 = 0;
+    let mut unaligned_length: u64 = 0;
     let mut primary_alignment = 0;
     let mut unaligned_reads = 0;
 
@@ -350,13 +350,13 @@ fn bam_stats(path: String) {
         let record = record.unwrap();
         if !record.flag().is_secondary() && !record.flag().is_supplementary() && record.flag().is_mapped() {
             //let read_original_length = record.
-            total_read_length += record.query_len() + record.cigar().hard_clipping(true) + record.cigar().hard_clipping(false);
-            total_primary_aligned_read_length += record.aligned_query_end() - record.aligned_query_start();
+            total_read_length += record.query_len() as u64 + record.cigar().hard_clipping(true) as u64 + record.cigar().hard_clipping(false) as u64;
+            total_primary_aligned_read_length += (record.aligned_query_end() - record.aligned_query_start()) as u64;
             primary_alignment += 1;
         } else if !record.flag().is_mapped()
         {
             // total_read_length += record.query_len();
-            unaligned_length += record.query_len();
+            unaligned_length += record.query_len() as u64;
             unaligned_reads += 1;
         }
     }
