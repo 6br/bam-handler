@@ -373,7 +373,7 @@ fn main() {
     let command = &args[1];
     let sa_merge = command == "attachsa";
     let realigner = command == "realign";
-    let stats = command == "stats";
+    let stats = command == "stats" || command == "stat";
     if !sa_merge && !realigner && !stats {
         let string = "    bam-handler
         
