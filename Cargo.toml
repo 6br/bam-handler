@@ -20,10 +20,12 @@ byteorder = "*"
 #libbigwig = { git = "https://github.com/6br/libBigWig" } # bigWig
 log = "*"
 itertools = "*"
+protobuf = { version = "2", features = ["with-bytes"] }
 regex = "*" 
 #rust-htslib = { version = "*", features = ["serde"] } # htsLib
 #serde = "*"
 #serde_derive = "*"
 #serde_json = "*"
 #serde_yaml = "*"
-#
+[build-dependencies]
+protoc-rust = "2.0"
