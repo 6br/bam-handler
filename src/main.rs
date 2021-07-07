@@ -337,29 +337,77 @@ fn calculate_primary<'a>(
     // process.kill();
 }
 
+fn bam_stats(path: String) {
+    let bam_stream = BufReader::with_capacity(1000000, File::open(path).unwrap());
+    let reader = bam::BamReader::from_stream(bam_stream, 2).unwrap();
+    let mut total_read_length = 0;
+    let mut total_primary_aligned_read_length = 0;
+    let mut unaligned_length = 0;
+
+    for record in reader {
+        let record = record.unwrap();
+        if !record.flag().is_secondary() && !record.flag().is_supplementary() {
+            //let read_original_length = record.
+            total_read_length += record.query_len();
+            total_primary_aligned_read_length += record.aligned_query_end() - record.aligned_query_start();
+        } else if !record.flag().is_mapped()
+        {
+            total_read_length += record.query_len();
+            unaligned_length += record.query_len();
+        }
+    }
+
+    println!("Total read length\t{}\nAligned read length\t{}\nUnaligned_length\t{}\nPrimary alignment ratio\t{}",
+     total_read_length, total_primary_aligned_read_length, unaligned_length, total_primary_aligned_read_length as f32 / total_read_length as f32 * 100.0);
+    return
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     // We assume that input is sorted by "samtools sort -n".
     //let reader = bam::IndexedReader::from_path(args[1].clone()).unwrap();
-    let bam_stream = BufReader::with_capacity(1000000, File::open(args[1].clone()).unwrap());
+    let command = &args[1];
+    let sa_merge = command == "attachsa";
+    let realigner = command == "realign";
+    let stats = command == "stats";
+    if !sa_merge && !realigner && !stats {
+        let string = "bam-handler
+        
+        USAGE:
+        bam-handler <SUBCOMMAND>
+
+        SUBCOMMANDS:
+        attatchsa Attach SA-tag in bam file from an output of LAST-split.
+        realign   Realign aligned reads in bam file.
+        stats     Collects statistics from a BAM file.
+        ";
+        println!("{}", string);
+        return;
+    }
+    if stats {
+        bam_stats(args[2].clone());
+        return;
+    }
+    let bam_stream = BufReader::with_capacity(1000000, File::open(args[2].clone()).unwrap());
     //let reader = bam::BamReader::from_path(args[1].clone()).unwrap();
     let reader = bam::BamReader::from_stream(bam_stream, 2).unwrap();
     let x = args
-        .get(4)
+        .get(5)
         .and_then(|a| a.parse::<usize>().ok())
         .unwrap_or(5usize);
     let alpha = args
-        .get(5)
+        .get(6)
         .and_then(|a| a.parse::<f64>().ok())
         .unwrap_or(0.85);
     let sigma = args
-        .get(6)
+        .get(7)
         .and_then(|a| a.parse::<f64>().ok())
         .unwrap_or(0.075);
     let dummy = "dummy.fa".to_string();
-    let path = args.get(2).unwrap_or(&dummy);
+    let path = args.get(3).unwrap_or(&dummy);
+    let realigner = args.get(4).unwrap_or(&dummy);
 
-    let sa_merge = args.len() <= 3;
+    //let sa_merge = args.len() <= 3;
     let mut writer = bam::BamWriter::build()
         .write_header(true)
         .from_stream(std::io::stdout(), reader.header().clone())
@@ -445,7 +493,7 @@ fn main() {
         }
     } else {
         if primary.len() > x {
-            calculate_primary(primary, previous_name, &args[3], alpha - sigma);
+            calculate_primary(primary, previous_name, &realigner, alpha - sigma);
         } else {
             println!(">{}", String::from_utf8_lossy(&previous_name));
             for (record, _, _) in primary {

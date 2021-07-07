@@ -1,4 +1,4 @@
-# SA-attacher
+# Bamhandler
 
 Attach SA-tag in bam file from the output of LAST-split.
 
@@ -8,10 +8,10 @@ Attach SA-tag in bam file from the output of LAST-split.
 
 ```bash
 cargo build --release
-cargo run --release -- /* input.bam */ > /* output.bam */
+cargo run --release -- attachsa /* input.bam */ > /* output.bam */
 ```
 
-Tips on brew environment:
+Tips on brew:
 
 ```bash
 export PATH=$(brew --prefix)/opt/python3/libexec/bin:$PATH 
