@@ -348,7 +348,7 @@ fn bam_stats(path: String) {
 
     for record in reader {
         let record = record.unwrap();
-        if !record.flag().is_secondary() && !record.flag().is_supplementary() {
+        if !record.flag().is_secondary() && !record.flag().is_supplementary() && record.flag().is_mapped() {
             //let read_original_length = record.
             total_read_length += record.query_len() + record.cigar().hard_clipping(true) + record.cigar().hard_clipping(false);
             total_primary_aligned_read_length += record.aligned_query_end() - record.aligned_query_start();
