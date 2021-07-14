@@ -1,6 +1,7 @@
 # Bamhandler
 
-Attach SA-tag in bam file from the output of LAST-split.
+* Calculate "Primary alignment rate".
+* Attach SA-tag in bam file from the output of LAST-split.
 
 (Under development; no guarantee to work)
 
