@@ -8,6 +8,7 @@ Attach SA-tag in bam file from the output of LAST-split.
 
 ```bash
 cargo build --release
+cargo run --release -- stats /* input.bam */ > /* output.stats */
 cargo run --release -- attachsa /* input.bam */ > /* output.bam */
 ```
 
