@@ -337,7 +337,7 @@ fn calculate_primary<'a>(
     // process.kill();
 }
 
-fn bam_stats(path: String) {
+fn bam_stats(path: String, end_margin: usize) {
     let bam_stream = BufReader::with_capacity(1000000, File::open(path).unwrap());
     let reader = bam::BamReader::from_stream(bam_stream, 2).unwrap();
     let mut total_read_length: u64 = 0;
@@ -345,6 +345,7 @@ fn bam_stats(path: String) {
     let mut unaligned_length: u64 = 0;
     let mut primary_alignment = 0;
     let mut unaligned_reads = 0;
+    let mut concordant_reads = 0;
 
     for record in reader {
         let record = record.unwrap();
@@ -362,7 +363,8 @@ fn bam_stats(path: String) {
     }
     println!("Total read length\t{}\nAligned length\t{}\nUnaligned_length\t{}\nPrimary alignment ratio\t{}\nPrimary alignment ratio with unaligned\t{}",
      total_read_length, total_primary_aligned_read_length, unaligned_length, total_primary_aligned_read_length as f64 / total_read_length as f64, total_primary_aligned_read_length as f64 / (total_read_length + unaligned_length) as f64);
-    println!("# of primary alignment\t{}\n# of unaligned reads\t{}", primary_alignment, unaligned_reads);
+    println!("# of primary alignment\t{}\n# of unaligned reads\t{}\n# of concordant reads\t{}", primary_alignment, unaligned_reads, concordant_reads);
+    println!("Read Concordant rate ({} bp of each end)\t{}", end_margin, concordant_reads as f64 / primary_alignment as f64);
     return
 }
 
@@ -389,7 +391,11 @@ fn main() {
         return;
     }
     if stats {
-        bam_stats(args[2].clone());
+        let end_margin = args
+            .get(3)
+            .and_then(|a| a.parse::<usize>().ok())
+            .unwrap_or(500usize);
+        bam_stats(args[2].clone(), end_margin);
         return;
     }
     let bam_stream = BufReader::with_capacity(1000000, File::open(args[2].clone()).unwrap());
