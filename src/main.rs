@@ -354,6 +354,9 @@ fn bam_stats(path: String, end_margin: usize) {
             total_read_length += record.query_len() as u64 + record.cigar().hard_clipping(true) as u64 + record.cigar().hard_clipping(false) as u64;
             total_primary_aligned_read_length += (record.aligned_query_end() - record.aligned_query_start()) as u64;
             primary_alignment += 1;
+            if record.aligned_query_start() <= end_margin && (record.query_len() as u64 + record.cigar().hard_clipping(true) as u64 + record.cigar().hard_clipping(false) as u64 - record.aligned_query_end()) <= end_margin {
+                concordant_reads += 1;
+            }
         } else if !record.flag().is_mapped()
         {
             // total_read_length += record.query_len();
