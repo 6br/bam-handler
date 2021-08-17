@@ -337,6 +337,13 @@ fn calculate_primary<'a>(
     // process.kill();
 }
 
+fn bai_stats(path: String, chr_index: usize) {
+    let reader = bam::IndexedReader::from_path(path).unwrap();
+    for bin in reader.index().references()[chr_index].bins().values() {
+        println!("{}\t{}", bin.bin_id(), bin.chunks().len());
+    }
+}
+
 fn bam_stats(path: String, end_margin: usize) {
     let bam_stream = BufReader::with_capacity(1000000, File::open(path).unwrap());
     let reader = bam::BamReader::from_stream(bam_stream, 2).unwrap();
@@ -395,7 +402,6 @@ fn bam_stats(path: String, end_margin: usize) {
         end_margin,
         concordant_reads as f64 / (primary_alignment + unaligned_reads) as f64
     );
-    return;
 }
 
 fn main() {
@@ -405,6 +411,7 @@ fn main() {
     let command = &args[1];
     let sa_merge = command == "attachsa";
     let realigner = command == "realign";
+    let bai = command == "bai" || command == "bin";
     let stats = command == "stats" || command == "stat";
     if !sa_merge && !realigner && !stats {
         let string = "    bam-handler
@@ -414,10 +421,15 @@ fn main() {
 
     SUBCOMMANDS:
         attatchsa Attach SA-tag in bam file from an output of LAST-split.
-        realign   Realign aligned reads in bam file.
-        stats     Collects statistics from a BAM file.
+        realign   Realign reads in bam file.
+        stats     Collect statistics from a BAM file.
+        bai       Output bins and counts of chunks of a BAI (the first chromosome in default).
         ";
         println!("{}", string);
+        return;
+    }
+    if bai {
+        bai_stats(args[2].clone(), 0);
         return;
     }
     if stats {
