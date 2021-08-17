@@ -413,6 +413,7 @@ fn main() {
     let realigner = command == "realign";
     let bai = command == "bai" || command == "bin";
     let stats = command == "stats" || command == "stat";
+    let frag = command == "frag";
     if !sa_merge && !realigner && !stats {
         let string = "    bam-handler
         
@@ -424,6 +425,7 @@ fn main() {
         realign   Realign reads in bam file.
         stats     Collect statistics from a BAM file.
         bai       Output bins and counts of chunks of a BAI (the first chromosome in default).
+        frag      Split longer reads into small fragements.
         ";
         println!("{}", string);
         return;
