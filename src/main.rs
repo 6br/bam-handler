@@ -349,28 +349,53 @@ fn bam_stats(path: String, end_margin: usize) {
 
     for record in reader {
         let record = record.unwrap();
-        if !record.flag().is_secondary() && !record.flag().is_supplementary() && record.flag().is_mapped() {
+        if !record.flag().is_secondary()
+            && !record.flag().is_supplementary()
+            && record.flag().is_mapped()
+        {
             //let read_original_length = record.
-            total_read_length += record.query_len() as u64 + record.cigar().hard_clipping(true) as u64 + record.cigar().hard_clipping(false) as u64;
-            total_primary_aligned_read_length += (record.aligned_query_end() - record.aligned_query_start()) as u64;
+            total_read_length += record.query_len() as u64
+                + record.cigar().hard_clipping(true) as u64
+                + record.cigar().hard_clipping(false) as u64;
+            total_primary_aligned_read_length +=
+                (record.aligned_query_end() - record.aligned_query_start()) as u64;
             primary_alignment += 1;
-            if record.aligned_query_start() as usize <= end_margin && (record.query_len() as usize + record.cigar().hard_clipping(true) as usize + record.cigar().hard_clipping(false) as usize - record.aligned_query_end() as usize) <= end_margin {
+            if record.aligned_query_start() as usize <= end_margin
+                && (record.query_len() as usize
+                    + record.cigar().hard_clipping(true) as usize
+                    + record.cigar().hard_clipping(false) as usize
+                    - record.aligned_query_end() as usize)
+                    <= end_margin
+            {
                 concordant_reads += 1;
             }
-        } else if !record.flag().is_mapped()
-        {
+        } else if !record.flag().is_mapped() {
             // total_read_length += record.query_len();
             unaligned_length += record.query_len() as u64;
             unaligned_reads += 1;
         }
     }
-    println!("Total read length\t{}", total_read_length + unaligned_length);
+    println!(
+        "Total read length\t{}",
+        total_read_length + unaligned_length
+    );
     println!("Total read length (aligned)\t{}\nAligned length\t{}\nUnaligned_length\t{}\nPrimary alignment ratio\t{}\nPrimary alignment ratio with unaligned\t{}",
      total_read_length, total_primary_aligned_read_length, unaligned_length, total_primary_aligned_read_length as f64 / total_read_length as f64, total_primary_aligned_read_length as f64 / (total_read_length + unaligned_length) as f64);
-    println!("# of primary alignment\t{}\n# of unaligned reads\t{}\n# of concordant alignments\t{}", primary_alignment, unaligned_reads, concordant_reads);
-    println!("Read Concordant rate against mapped ({} bp of each end)\t{}", end_margin, concordant_reads as f64 / primary_alignment as f64);
-    println!("Read Concordant rate against all read ({} bp of each end)\t{}", end_margin, concordant_reads as f64 / (primary_alignment + unaligned_reads) as f64);
-    return
+    println!(
+        "# of primary alignment\t{}\n# of unaligned reads\t{}\n# of concordant alignments\t{}",
+        primary_alignment, unaligned_reads, concordant_reads
+    );
+    println!(
+        "Read Concordant rate against mapped ({} bp of each end)\t{}",
+        end_margin,
+        concordant_reads as f64 / primary_alignment as f64
+    );
+    println!(
+        "Read Concordant rate against all read ({} bp of each end)\t{}",
+        end_margin,
+        concordant_reads as f64 / (primary_alignment + unaligned_reads) as f64
+    );
+    return;
 }
 
 fn main() {
@@ -440,17 +465,17 @@ fn main() {
         // eprintln!("{:?} {}", ref_name, record.ref_id());
         //let ref_name = &reader.header().reference_name(record.ref_id() as u32);
         let mut ref_seq = vec![];
-        if !sa_merge{
-        if let Some(ref_name) = ref_name {
-            let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(path).unwrap();
-            fasta_reader.fetch(
-                ref_name,
-                record.start() as u64,
-                record.calculate_end() as u64,
-            );
-            fasta_reader.read(&mut ref_seq);
+        if !sa_merge {
+            if let Some(ref_name) = ref_name {
+                let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(path).unwrap();
+                fasta_reader.fetch(
+                    ref_name,
+                    record.start() as u64,
+                    record.calculate_end() as u64,
+                );
+                fasta_reader.read(&mut ref_seq);
+            }
         }
-    }
         // eprintln!("{:?} {}", record, record.flag().is_supplementary());
         if previous_name == record.name() {
             if !record.flag().is_supplementary() {
