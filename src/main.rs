@@ -414,7 +414,7 @@ fn main() {
     let bai = command == "bai" || command == "bin";
     let stats = command == "stats" || command == "stat";
     let frag = command == "frag";
-    if !sa_merge && !realigner && !stats {
+    if !sa_merge && !realigner && !stats && !bai && !frag {
         let string = "    bam-handler
         
     USAGE:
@@ -434,6 +434,9 @@ fn main() {
         bai_stats(args[2].clone(), 0);
         return;
     }
+    /*if frag {
+
+    }*/
     if stats {
         let end_margin = args
             .get(3)
