@@ -24,14 +24,20 @@ class Array
   end
   
   bin_range = [1, 9, 73, 585, 4681]
-  list = [[],[],[],[],[]]
+  list_chunk = [[],[],[],[],[]]
+  list_offset = [[],[],[],[],[]]
   
   while line = gets
     k = line.chomp.split("\t")
     idx = bin_range.index{|t| t > k[0].to_i}
     idx = 4 unless idx
-    list[idx] << k[1].to_i
+    list_chunk[idx] << k[1].to_i
+    list_offset[idx] << k[2].to_i
   end
   
+
   puts ["layer", "length", "sum", "mean", "var", "median"].join("\t")
-  list.each.with_index{|t, i| puts [i, t.length, t.sum, t.mean, t.var, t.median].join("\t")}
+  list_chunk.each.with_index{|t, i| puts [i, t.length, t.sum, t.mean, t.var, t.median].join("\t")}
+
+#  puts ["layer", "length", "sum", "mean", "var", "median"].join("\t")
+  list_offset.each.with_index{|t, i| puts [i, t.length, t.sum, t.mean, t.var, t.median].join("\t")}

@@ -340,7 +340,15 @@ fn calculate_primary<'a>(
 fn bai_stats(path: String, chr_index: usize) {
     let reader = bam::IndexedReader::from_path(path).unwrap();
     for bin in reader.index().references()[chr_index].bins().values() {
-        println!("{}\t{}", bin.bin_id(), bin.chunks().len());
+        println!(
+            "{}\t{}\t{}",
+            bin.bin_id(),
+            bin.chunks().len(),
+            bin.chunks()
+                .iter()
+                .map(|chunk| chunk.end().raw() - chunk.start().raw())
+                .sum::<u64>()
+        );
     }
 }
 
