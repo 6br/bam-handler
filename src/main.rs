@@ -13,7 +13,6 @@ use bam::{
 };
 use bio::alphabets::dna::revcomp;
 use byteorder::WriteBytesExt;
-use frag::frag;
 use io::BufReader;
 use itertools::Itertools;
 use regex::Regex;
