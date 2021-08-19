@@ -99,9 +99,9 @@ fn select_base<'a>(
         minor as f64 / d as f64
     );
     if minor as f64 <= threshold {
-        return seqs[0].1;
+        seqs[0].1
     } else {
-        return read;
+        read
     }
 }
 
@@ -219,7 +219,7 @@ fn calculate_primary<'a>(
             let clip_removed = clipping.replace_all(&readable_string4, "");
 
             //record.cigar().clear();
-            let bytes = clip_removed.bytes().into_iter();
+            let bytes = clip_removed.bytes();
             //record.cigar().extend_from_text(bytes);
             let record_str = format!(
                 "{}:{}-{}",
@@ -247,7 +247,7 @@ fn calculate_primary<'a>(
             // record.sequence().extend_from_text(ref_seq);
             //record.reset_seq();
             //record.set_seq(ref_seq);
-            if record.sequence().to_vec().len() > 0 {
+            if !record.sequence().to_vec().is_empty() {
                 if record.flag().is_reverse_strand() {
                     read = record.sequence().rev_compl(..).collect::<_>();
                 } else {
@@ -323,7 +323,7 @@ fn calculate_primary<'a>(
         }
         unique_frequency.sort_by_key(|t| t.0);
         unique_frequency.reverse();
-        if unique_frequency.len() > 0 {
+        if !unique_frequency.is_empty() {
             print!(
                 "{}",
                 select_base(&read, unique_frequency, alpha)
@@ -332,7 +332,7 @@ fn calculate_primary<'a>(
             );
         }
     }
-    println!("");
+    println!();
 
     //stdout.get_mut().wait_with_output().unwrap();
     process.wait_with_output().unwrap();
@@ -525,7 +525,7 @@ fn main() {
                 } else {
                     calculate_primary(primary, previous_name, &args[3], alpha - sigma);
                 }
-            } else if primary.len() > 0 {
+            } else if !primary.is_empty() {
                 if sa_merge {
                     for i in calculate_sam(primary, closure) {
                         writer.write(&i).unwrap();
@@ -550,7 +550,7 @@ fn main() {
                             }
                         }
                     }
-                    println!("");
+                    println!();
                 }
             }
             let previous = record.clone();
@@ -566,28 +566,25 @@ fn main() {
         for i in calculate_sam(primary, closure) {
             writer.write(&i).unwrap();
         }
+    } else if primary.len() > x {
+        calculate_primary(primary, previous_name, &realigner, alpha - sigma);
     } else {
-        if primary.len() > x {
-            calculate_primary(primary, previous_name, &realigner, alpha - sigma);
-        } else {
-            println!(">{}", String::from_utf8_lossy(&previous_name));
-            for (record, _, _) in primary {
-                if record.sequence().len() > 0 {
-                    //record.sequence().write_readable(&mut io::stdout());
-                    let seq = record.sequence();
-                    if record.flag().is_reverse_strand() {
-                        write_iterator(
-                            &mut io::stdout(),
-                            revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter(),
-                        )
-                        .unwrap();
-                    } else {
-                        write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i)))
-                            .unwrap();
-                    }
+        println!(">{}", String::from_utf8_lossy(&previous_name));
+        for (record, _, _) in primary {
+            if record.sequence().len() > 0 {
+                //record.sequence().write_readable(&mut io::stdout());
+                let seq = record.sequence();
+                if record.flag().is_reverse_strand() {
+                    write_iterator(
+                        &mut io::stdout(),
+                        revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter(),
+                    )
+                    .unwrap();
+                } else {
+                    write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i))).unwrap();
                 }
             }
-            println!("");
         }
+        println!();
     }
 }

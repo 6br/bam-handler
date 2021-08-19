@@ -19,11 +19,11 @@ fn ranges(beg: i32, end: i32) -> Vec<(i32, i32)> {
             vec.push(item);
         }
     }
-    let mut array: Vec<(i32, i32)> = vec.into_iter().map(|t| bin_to_region(t)).collect();
+    let mut array: Vec<(i32, i32)> = vec.into_iter().map(bin_to_region).collect();
     let array_length = array.len();
     array[0].0 = beg;
     array[array_length - 1].1 = end;
-    return array;
+    array
 }
 
 /// Returns a BAI bin for the record with alignment `[beg-end)`.
@@ -32,7 +32,7 @@ pub fn region_to_bin(beg: i32, end: i32) -> u32 {
     let mut res = 0_i32;
     for i in (14..27).step_by(3) {
         if beg >> i == end >> i {
-            res = ((1 << 29 - i) - 1) / 7 + (beg >> i);
+            res = ((1 << (29 - i)) - 1) / 7 + (beg >> i);
             break;
         }
     }
@@ -71,8 +71,8 @@ impl Iterator for BinsIter {
             }
             self.i += 1;
             self.t += 1 << (self.i * 3);
-            self.curr_bin = (self.t + (self.start >> 26 - 3 * self.i)) as u32 - 1;
-            self.bins_end = (self.t + (self.end >> 26 - 3 * self.i)) as u32;
+            self.curr_bin = (self.t + (self.start >> (26 - 3 * self.i))) as u32 - 1;
+            self.bins_end = (self.t + (self.end >> (26 - 3 * self.i))) as u32;
 
             if self.i == 0 {
                 return Some(0);
@@ -140,7 +140,7 @@ pub fn bench(input: String, range: String) -> Result<(), Box<dyn std::error::Err
     let duration = start.elapsed();
 
     println!("Time elapsed in calculate_end() is: {:?}", duration);
-    return Ok(());
+    Ok(())
 }
 
 impl std::iter::FusedIterator for BinsIter {}
