@@ -26,5 +26,7 @@ regex = "*"
 #serde_derive = "*"
 #serde_json = "*"
 #serde_yaml = "*"
+genomic_range = { git = "https://github.com/6br/genomic_range", rev = "cba2b1c" }
+
 [build-dependencies]
 protoc-rust = "2.0"

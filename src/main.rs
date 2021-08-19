@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate log;
 extern crate bam;
+
+mod frag;
+
 use bam::Record;
 use bam::RecordReader;
 use bam::{
@@ -10,6 +13,7 @@ use bam::{
 };
 use bio::alphabets::dna::revcomp;
 use byteorder::WriteBytesExt;
+use frag::frag;
 use io::BufReader;
 use itertools::Itertools;
 use regex::Regex;
@@ -422,7 +426,8 @@ fn main() {
     let bai = command == "bai" || command == "bin";
     let stats = command == "stats" || command == "stat";
     let frag = command == "frag";
-    if !sa_merge && !realigner && !stats && !bai && !frag {
+    let bench = command == "bench" || command == "benchmark";
+    if !sa_merge && !realigner && !stats && !bai && !frag && !bench {
         let string = "    bam-handler
         
     USAGE:
@@ -433,7 +438,8 @@ fn main() {
         realign   Realign reads in bam file.
         stats     Collect statistics from a BAM file.
         bai       Output bins and counts of chunks of a BAI (the first chromosome in default).
-        frag      Split longer reads into small fragements.
+        frag      Split longer reads into small fragments.
+        bench     Benchmark of parsing CIGARS for the given range.
         ";
         println!("{}", string);
         return;
@@ -442,9 +448,14 @@ fn main() {
         bai_stats(args[2].clone(), 0);
         return;
     }
-    /*if frag {
-
-    }*/
+    if frag {
+        frag::frag(args[2].clone(), args[3].clone());
+        return;
+    }
+    if bench {
+        frag::bench(args[2].clone(), args[3].clone()).unwrap();
+        return;
+    }
     if stats {
         let end_margin = args
             .get(3)
