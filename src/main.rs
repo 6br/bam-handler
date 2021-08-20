@@ -188,10 +188,12 @@ fn calculate_primary<'a>(
         let output = io::BufWriter::new(process.stdin.take().unwrap());
         let mut header = Header::new();
 
-        header.push_entry(HeaderEntry::ref_sequence(
-            name.to_string(),
-            primary[0].0.query_len(),
-        ));
+        header
+            .push_entry(HeaderEntry::ref_sequence(
+                name.to_string(),
+                primary[0].0.query_len(),
+            ))
+            .unwrap();
 
         let mut writer = bam::SamWriter::build().from_stream(output, header).unwrap();
 
@@ -209,7 +211,7 @@ fn calculate_primary<'a>(
                     readable.write_u8(op.to_byte()).unwrap();
                 }
             } else {
-                record.cigar().write_readable(&mut readable);
+                record.cigar().write_readable(&mut readable).unwrap();
             }
             let readable_string = String::from_utf8_lossy(&readable);
             let readable_string2 = readable_string.replace("D", "Z");
@@ -229,7 +231,7 @@ fn calculate_primary<'a>(
             );
             // record.set_start(record.cigar().soft_clipping(true) as i32);
             record.set_start(record.cigar().soft_clipping(true) as i32);
-            record.set_cigar(bytes);
+            record.set_cigar(bytes).unwrap();
 
             record.tags_mut().remove(b"MD");
 
@@ -448,7 +450,7 @@ fn main() {
         return;
     }
     if frag {
-        frag::frag(args[2].clone(), args[3].clone());
+        frag::frag(args[2].clone(), args[3].clone(), args.get(4).is_some());
         return;
     }
     if bench {
@@ -503,12 +505,14 @@ fn main() {
         if !sa_merge {
             if let Some(ref_name) = ref_name {
                 let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(path).unwrap();
-                fasta_reader.fetch(
-                    ref_name,
-                    record.start() as u64,
-                    record.calculate_end() as u64,
-                );
-                fasta_reader.read(&mut ref_seq);
+                fasta_reader
+                    .fetch(
+                        ref_name,
+                        record.start() as u64,
+                        record.calculate_end() as u64,
+                    )
+                    .unwrap();
+                fasta_reader.read(&mut ref_seq).unwrap();
             }
         }
         // eprintln!("{:?} {}", record, record.flag().is_supplementary());

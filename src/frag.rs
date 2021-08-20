@@ -145,10 +145,16 @@ pub fn bench(input: String, range: String) -> Result<(), Box<dyn std::error::Err
 
 impl std::iter::FusedIterator for BinsIter {}
 
-pub fn frag(input_path: String, output_path: String) {
+pub fn frag(input_path: String, output_path: String, sequence_squash: bool) {
     let reader = bam::BamReader::from_path(input_path, 4).unwrap();
     let out_writer = File::create(&output_path).unwrap();
     let output = io::BufWriter::with_capacity(1048576, out_writer);
+    //     let sequence_squash = true;
+    let left_right_padding = if sequence_squash {
+        Operation::Hard
+    } else {
+        Operation::Soft
+    };
 
     let mut writer = bam::BamWriter::build()
         .write_header(true)
@@ -166,6 +172,7 @@ pub fn frag(input_path: String, output_path: String) {
         let ranges = ranges(true_start, true_end);
         record.tags_mut().push_num(b"TE", true_end as i32);
         record.tags_mut().push_num(b"TS", true_start as i32);
+        record.tags_mut().remove(b"MD");
 
         let left_hard_clip = record.cigar().hard_clipping(true);
         let right_hard_clip = record.cigar().hard_clipping(false);
@@ -177,8 +184,10 @@ pub fn frag(input_path: String, output_path: String) {
 
         let mut current_pos = true_start;
         let sequence_len = record.sequence().len();
+        let sequence = record.sequence();
+        // let qualities = record.qualities();
         // assert!(sequence_len > 0, "{:?}", record.name());
-        let mut consumed_query_len = 0;
+        let mut consumed_query_len = left_hard_clip;
         let mut cigar_index = 0;
         //eprintln!("{:?}", cigars);
         if ranges.len() == 1 {
@@ -190,7 +199,7 @@ pub fn frag(input_path: String, output_path: String) {
                 let mut cigar = Cigar::new();
                 cigar.push(left_hard_clip, Operation::Hard);
                 if consumed_query_len > 0 {
-                    cigar.push(consumed_query_len, Operation::Soft);
+                    cigar.push(consumed_query_len, left_right_padding);
                 }
                 loop {
                     if cigars.len() <= cigar_index || current_pos == end {
@@ -228,6 +237,7 @@ pub fn frag(input_path: String, output_path: String) {
                 //eprintln!("{}", readable_string);
                 //let bytes = readable_string.bytes().into_iter();
                 record.set_cigar(readable).unwrap();
+                let previous_consumed_query_len = consumed_query_len;
                 consumed_query_len = record.cigar().calculate_query_len();
                 debug!(
                     "{} {} {}",
@@ -236,8 +246,14 @@ pub fn frag(input_path: String, output_path: String) {
                     record.cigar().calculate_query_len()
                 );
                 if sequence_len > 0 {
-                    let remaining_query_len = (sequence_len as u32) - consumed_query_len;
-                    cigar.push(remaining_query_len, Operation::Soft);
+                    let remaining_query_len = (sequence_len as u32)
+                        - consumed_query_len
+                        - if !sequence_squash {
+                            0
+                        } else {
+                            previous_consumed_query_len
+                        };
+                    cigar.push(remaining_query_len, left_right_padding);
                     debug!("{} {}", consumed_query_len, remaining_query_len);
                 }
                 cigar.push(right_hard_clip, Operation::Hard);
@@ -246,6 +262,30 @@ pub fn frag(input_path: String, output_path: String) {
                 let readable_string = String::from_utf8_lossy(&readable2);
                 debug!("{}", readable_string);
                 record.set_cigar(readable2).unwrap();
+
+                if sequence_squash && sequence_len > 0 {
+                    let subseq = sequence.subseq(
+                        previous_consumed_query_len as usize
+                            ..(consumed_query_len + previous_consumed_query_len) as usize,
+                    );
+                    debug!(
+                        "{} {} {} {}",
+                        previous_consumed_query_len,
+                        consumed_query_len,
+                        sequence_len,
+                        record.cigar().calculate_query_len(),
+                    );
+                    //let qualities = &qualities.raw()
+                    //    [previous_consumed_query_len as usize..consumed_query_len as usize]; // //.collect();
+                    record
+                        .set_seq_qual(
+                            subseq,
+                            std::iter::empty(),
+                            // (consumed_query_len as usize - previous_consumed_query_len as usize),
+                            //                                * 2,
+                        )
+                        .unwrap();
+                }
                 assert!(
                     record.cigar().calculate_query_len() == record.sequence().len() as u32
                         || record.sequence().len() == 0,
@@ -253,7 +293,6 @@ pub fn frag(input_path: String, output_path: String) {
                     record.cigar().calculate_query_len(),
                     record.sequence().len()
                 );
-
                 assert!(
                     end == record.start() + record.cigar().calculate_ref_len() as i32,
                     "Expected end {}, calculated end {}, true end {}",
