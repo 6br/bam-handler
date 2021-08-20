@@ -256,10 +256,12 @@ fn calculate_primary<'a>(
                     read = record.sequence().to_vec();
                 }
             }
-            record.set_seq_qual(
-                ref_seq,
-                iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
-            );
+            record
+                .set_seq_qual(
+                    ref_seq,
+                    iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
+                )
+                .unwrap();
 
             writer.write(&record).unwrap();
         }
