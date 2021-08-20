@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate log;
 extern crate bam;
-
+#[macro_use]
+extern crate lazy_static;
+mod fasta;
 mod frag;
 
 use bam::Record;
@@ -11,8 +13,8 @@ use bam::{
     record::tags::{StringType, TagValue},
     Header, RecordWriter,
 };
-use bio::alphabets::dna::revcomp;
 use byteorder::WriteBytesExt;
+use fasta::revcomp;
 use io::BufReader;
 use itertools::Itertools;
 use regex::Regex;
@@ -506,7 +508,7 @@ fn main() {
         let mut ref_seq = vec![];
         if !sa_merge {
             if let Some(ref_name) = ref_name {
-                let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(path).unwrap();
+                let mut fasta_reader = fasta::IndexedReader::from_file(path).unwrap();
                 fasta_reader
                     .fetch(
                         ref_name,
