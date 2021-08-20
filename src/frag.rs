@@ -252,7 +252,14 @@ pub fn frag(input_path: String, output_path: String, sequence_squash: bool) {
                     previous_consumed_query_len,
                     record.cigar().calculate_query_len()
                 );
-                assert!(previous_consumed_query_len < consumed_query_len);
+                assert!(
+                    previous_consumed_query_len < consumed_query_len,
+                    "{} {} {} {}",
+                    consumed_query_len,
+                    sequence_len,
+                    previous_consumed_query_len,
+                    record.cigar().calculate_query_len()
+                );
                 if sequence_len > 0 && sequence_len as u32 - consumed_query_len > 0 {
                     let remaining_query_len = (sequence_len as u32) - consumed_query_len;
                     cigar.push(remaining_query_len, left_right_padding);
