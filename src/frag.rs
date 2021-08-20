@@ -27,6 +27,7 @@ fn ranges(beg: i32, end: i32) -> Vec<(i32, i32)> {
 }
 
 /// Returns a BAI bin for the record with alignment `[beg-end)`.
+/*
 pub fn region_to_bin(beg: i32, end: i32) -> u32 {
     let end = end - 1;
     let mut res = 0_i32;
@@ -38,7 +39,7 @@ pub fn region_to_bin(beg: i32, end: i32) -> u32 {
     }
     res as u32
 }
-
+*/
 /// Returns all possible BAI bins for the region `[beg-end)`.
 pub fn region_to_bins(start: i32, end: i32) -> BinsIter {
     BinsIter {
@@ -187,7 +188,7 @@ pub fn frag(input_path: String, output_path: String, sequence_squash: bool) {
         let sequence = record.sequence();
         // let qualities = record.qualities();
         // assert!(sequence_len > 0, "{:?}", record.name());
-        let mut consumed_query_len = left_hard_clip;
+        let mut consumed_query_len = 0; //left_hard_clip;
         let mut cigar_index = 0;
         //eprintln!("{:?}", cigars);
         if ranges.len() == 1 {
@@ -238,21 +239,22 @@ pub fn frag(input_path: String, output_path: String, sequence_squash: bool) {
                 //let bytes = readable_string.bytes().into_iter();
                 record.set_cigar(readable).unwrap();
                 let previous_consumed_query_len = consumed_query_len;
-                consumed_query_len = record.cigar().calculate_query_len();
+                consumed_query_len = record.cigar().calculate_query_len()
+                    + if sequence_squash {
+                        previous_consumed_query_len
+                    } else {
+                        0
+                    };
                 debug!(
-                    "{} {} {}",
+                    "{} {} {} {}",
                     consumed_query_len,
                     sequence_len,
+                    previous_consumed_query_len,
                     record.cigar().calculate_query_len()
                 );
-                if sequence_len > 0 {
-                    let remaining_query_len = (sequence_len as u32)
-                        - consumed_query_len
-                        - if !sequence_squash {
-                            0
-                        } else {
-                            previous_consumed_query_len
-                        };
+                assert!(previous_consumed_query_len < consumed_query_len);
+                if sequence_len > 0 && sequence_len as u32 - consumed_query_len > 0 {
+                    let remaining_query_len = (sequence_len as u32) - consumed_query_len;
                     cigar.push(remaining_query_len, left_right_padding);
                     debug!("{} {}", consumed_query_len, remaining_query_len);
                 }
@@ -264,10 +266,8 @@ pub fn frag(input_path: String, output_path: String, sequence_squash: bool) {
                 record.set_cigar(readable2).unwrap();
 
                 if sequence_squash && sequence_len > 0 {
-                    let subseq = sequence.subseq(
-                        previous_consumed_query_len as usize
-                            ..(consumed_query_len + previous_consumed_query_len) as usize,
-                    );
+                    let subseq = sequence
+                        .subseq(previous_consumed_query_len as usize..consumed_query_len as usize);
                     debug!(
                         "{} {} {} {}",
                         previous_consumed_query_len,

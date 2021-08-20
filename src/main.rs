@@ -35,7 +35,7 @@ where
     fn read_into(&mut self, record: &mut Record) -> std::io::Result<bool> {
         if let Some(next_record) = self.0.next() {
             // record = next_record.1;
-            std::mem::replace(record, next_record.clone());
+            let _ = std::mem::replace(record, next_record.clone());
             Ok(true)
         } else {
             Ok(false)
@@ -107,13 +107,16 @@ fn select_base<'a>(
     }
 }
 
-fn calculate_sam<'a, F>(primary: Vec<(Record, Option<&str>, Vec<u8>)>, lambda: F) -> Vec<Record>
+fn calculate_sam<'a, F>(
+    primary: Vec<(Record, Option<&str>, Vec<u8>)>,
+    lambda: F,
+) -> Result<Vec<Record>, Box<dyn std::error::Error>>
 where
     F: Fn(u32) -> Option<&'a str>,
 {
     let mut primary = primary.clone();
     if primary.iter().all(|t| t.0.ref_id() == 1) {
-        return primary.into_iter().map(|t| t.0).collect::<Vec<_>>();
+        return Ok(primary.into_iter().map(|t| t.0).collect::<Vec<_>>());
     }
     primary.sort_by(|a, b| {
         (a.0.cigar().soft_clipping(!a.0.flag().is_reverse_strand())
@@ -127,7 +130,7 @@ where
         .iter()
         .map(|t| {
             let mut readable: Vec<u8> = Vec::new();
-            t.0.cigar().write_readable(&mut readable);
+            t.0.cigar().write_readable(&mut readable).unwrap();
 
             let strand = if t.0.flag().is_reverse_strand() {
                 "-"
@@ -150,7 +153,7 @@ where
             .join(",")
         })
         .collect::<Vec<_>>();
-    primary
+    return Ok(primary
         .into_iter()
         .enumerate()
         .map(|(i, mut t)| {
@@ -166,7 +169,7 @@ where
             );
             t.0
         })
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>());
 }
 
 fn calculate_primary<'a>(
@@ -174,7 +177,7 @@ fn calculate_primary<'a>(
     name_vec: Vec<u8>, //fasta_reader: bio::io::fasta::IndexedReader<File>,
     realigner: &str,
     alpha: f64,
-) {
+) -> Result<(), Box<dyn std::error::Error>> {
     let name = String::from_utf8_lossy(&name_vec);
     let mut process = match Command::new(realigner)
         .args(&[name.to_string()])
@@ -247,10 +250,6 @@ fn calculate_primary<'a>(
             };
             // eprintln!("{} {}", ref_seq.len(), record.calculate_end() - record.start());
 
-            // record.sequence().clear();
-            // record.sequence().extend_from_text(ref_seq);
-            //record.reset_seq();
-            //record.set_seq(ref_seq);
             if !record.sequence().to_vec().is_empty() {
                 if record.flag().is_reverse_strand() {
                     read = record.sequence().rev_compl(..).collect::<_>();
@@ -272,11 +271,11 @@ fn calculate_primary<'a>(
         record.set_name(name.bytes());
         record.set_ref_id(0);
         record.set_start(0);
-        record.set_cigar(format!("{}M", read.len()).bytes());
+        record.set_cigar(format!("{}M", read.len()).bytes())?;
         record.set_seq_qual(
             read,
             iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
-        );
+        )?;
 
         writer.write(&record).unwrap();
 
@@ -342,7 +341,7 @@ fn calculate_primary<'a>(
 
     //stdout.get_mut().wait_with_output().unwrap();
     process.wait_with_output().unwrap();
-
+    return Ok(());
     // process.kill();
 }
 
@@ -527,15 +526,15 @@ fn main() {
         } else {
             if primary.len() > x {
                 if sa_merge {
-                    for i in calculate_sam(primary, closure) {
+                    for i in calculate_sam(primary, closure).unwrap() {
                         writer.write(&i).unwrap();
                     }
                 } else {
-                    calculate_primary(primary, previous_name, &args[3], alpha - sigma);
+                    calculate_primary(primary, previous_name, &args[3], alpha - sigma).unwrap();
                 }
             } else if !primary.is_empty() {
                 if sa_merge {
-                    for i in calculate_sam(primary, closure) {
+                    for i in calculate_sam(primary, closure).unwrap() {
                         writer.write(&i).unwrap();
                     }
                 } else {
@@ -571,11 +570,11 @@ fn main() {
         }
     }
     if sa_merge {
-        for i in calculate_sam(primary, closure) {
+        for i in calculate_sam(primary, closure).unwrap() {
             writer.write(&i).unwrap();
         }
     } else if primary.len() > x {
-        calculate_primary(primary, previous_name, &realigner, alpha - sigma);
+        calculate_primary(primary, previous_name, &realigner, alpha - sigma).unwrap();
     } else {
         println!(">{}", String::from_utf8_lossy(&previous_name));
         for (record, _, _) in primary {
