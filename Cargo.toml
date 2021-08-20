@@ -12,7 +12,7 @@ keywords = ["bioinformatics", "genome browser"]
 #crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
-bio = { git = "https://github.com/rust-bio/rust-bio" }
+bio = { git = "https://github.com/rust-bio/rust-bio", rev="5b2b67b" }
 bam = { git = "https://github.com/6br/bam" }
 #bitpacking = "0.5" # Pfor
 byteorder = "*"
