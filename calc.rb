@@ -10,6 +10,7 @@ class Array
     def median
       sorted = self.sort
       len = sorted.length
+      return 0 if len == 0
       (sorted[(len - 1) / 2] + sorted[len / 2]) / 2.0
     end
   
