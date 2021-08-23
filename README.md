@@ -1,6 +1,6 @@
 # Bamhandler
 
-* Calculate "Primary alignment rate".
+* Calculate "Primary alignment rate" and other BAM file stats.
 * Attach SA-tag in bam file from the output of LAST-split.
 
 (Under development; no guarantee to work)
@@ -9,6 +9,7 @@
 
 ```bash
 cargo build --release
+cargo run --release -- help
 cargo run --release -- stats /* input.bam */ > /* output.stats */
 cargo run --release -- attachsa /* input.bam */ > /* output.bam */
 ```
