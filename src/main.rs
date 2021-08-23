@@ -1,6 +1,13 @@
 #[macro_use]
 extern crate log;
 extern crate bam;
+#[macro_use]
+extern crate lazy_static;
+
+#[warn(dead_code)]
+mod fasta;
+mod frag;
+
 use bam::Record;
 use bam::RecordReader;
 use bam::{
@@ -8,8 +15,9 @@ use bam::{
     record::tags::{StringType, TagValue},
     Header, RecordWriter,
 };
-use bio::alphabets::dna::revcomp;
 use byteorder::WriteBytesExt;
+use env_logger;
+use fasta::revcomp;
 use io::BufReader;
 use itertools::Itertools;
 use regex::Regex;
@@ -30,7 +38,7 @@ where
     fn read_into(&mut self, record: &mut Record) -> std::io::Result<bool> {
         if let Some(next_record) = self.0.next() {
             // record = next_record.1;
-            std::mem::replace(record, next_record.clone());
+            let _ = std::mem::replace(record, next_record.clone());
             Ok(true)
         } else {
             Ok(false)
@@ -96,19 +104,22 @@ fn select_base<'a>(
         minor as f64 / d as f64
     );
     if minor as f64 <= threshold {
-        return seqs[0].1;
+        seqs[0].1
     } else {
-        return read;
+        read
     }
 }
 
-fn calculate_sam<'a, F>(primary: Vec<(Record, Option<&str>, Vec<u8>)>, lambda: F) -> Vec<Record>
+fn calculate_sam<'a, F>(
+    primary: Vec<(Record, Option<&str>, Vec<u8>)>,
+    lambda: F,
+) -> Result<Vec<Record>, Box<dyn std::error::Error>>
 where
     F: Fn(u32) -> Option<&'a str>,
 {
     let mut primary = primary.clone();
     if primary.iter().all(|t| t.0.ref_id() == 1) {
-        return primary.into_iter().map(|t| t.0).collect::<Vec<_>>();
+        return Ok(primary.into_iter().map(|t| t.0).collect::<Vec<_>>());
     }
     primary.sort_by(|a, b| {
         (a.0.cigar().soft_clipping(!a.0.flag().is_reverse_strand())
@@ -122,7 +133,7 @@ where
         .iter()
         .map(|t| {
             let mut readable: Vec<u8> = Vec::new();
-            t.0.cigar().write_readable(&mut readable);
+            t.0.cigar().write_readable(&mut readable).unwrap();
 
             let strand = if t.0.flag().is_reverse_strand() {
                 "-"
@@ -145,7 +156,7 @@ where
             .join(",")
         })
         .collect::<Vec<_>>();
-    primary
+    return Ok(primary
         .into_iter()
         .enumerate()
         .map(|(i, mut t)| {
@@ -161,7 +172,7 @@ where
             );
             t.0
         })
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>());
 }
 
 fn calculate_primary<'a>(
@@ -169,7 +180,7 @@ fn calculate_primary<'a>(
     name_vec: Vec<u8>, //fasta_reader: bio::io::fasta::IndexedReader<File>,
     realigner: &str,
     alpha: f64,
-) {
+) -> Result<(), Box<dyn std::error::Error>> {
     let name = String::from_utf8_lossy(&name_vec);
     let mut process = match Command::new(realigner)
         .args(&[name.to_string()])
@@ -185,10 +196,12 @@ fn calculate_primary<'a>(
         let output = io::BufWriter::new(process.stdin.take().unwrap());
         let mut header = Header::new();
 
-        header.push_entry(HeaderEntry::ref_sequence(
-            name.to_string(),
-            primary[0].0.query_len(),
-        ));
+        header
+            .push_entry(HeaderEntry::ref_sequence(
+                name.to_string(),
+                primary[0].0.query_len(),
+            ))
+            .unwrap();
 
         let mut writer = bam::SamWriter::build().from_stream(output, header).unwrap();
 
@@ -206,7 +219,7 @@ fn calculate_primary<'a>(
                     readable.write_u8(op.to_byte()).unwrap();
                 }
             } else {
-                record.cigar().write_readable(&mut readable);
+                record.cigar().write_readable(&mut readable).unwrap();
             }
             let readable_string = String::from_utf8_lossy(&readable);
             let readable_string2 = readable_string.replace("D", "Z");
@@ -216,7 +229,7 @@ fn calculate_primary<'a>(
             let clip_removed = clipping.replace_all(&readable_string4, "");
 
             //record.cigar().clear();
-            let bytes = clip_removed.bytes().into_iter();
+            let bytes = clip_removed.bytes();
             //record.cigar().extend_from_text(bytes);
             let record_str = format!(
                 "{}:{}-{}",
@@ -226,7 +239,7 @@ fn calculate_primary<'a>(
             );
             // record.set_start(record.cigar().soft_clipping(true) as i32);
             record.set_start(record.cigar().soft_clipping(true) as i32);
-            record.set_cigar(bytes);
+            record.set_cigar(bytes).unwrap();
 
             record.tags_mut().remove(b"MD");
 
@@ -240,21 +253,19 @@ fn calculate_primary<'a>(
             };
             // eprintln!("{} {}", ref_seq.len(), record.calculate_end() - record.start());
 
-            // record.sequence().clear();
-            // record.sequence().extend_from_text(ref_seq);
-            //record.reset_seq();
-            //record.set_seq(ref_seq);
-            if record.sequence().to_vec().len() > 0 {
+            if !record.sequence().to_vec().is_empty() {
                 if record.flag().is_reverse_strand() {
                     read = record.sequence().rev_compl(..).collect::<_>();
                 } else {
                     read = record.sequence().to_vec();
                 }
             }
-            record.set_seq_qual(
-                ref_seq,
-                iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
-            );
+            record
+                .set_seq_qual(
+                    ref_seq,
+                    iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
+                )
+                .unwrap();
 
             writer.write(&record).unwrap();
         }
@@ -263,11 +274,11 @@ fn calculate_primary<'a>(
         record.set_name(name.bytes());
         record.set_ref_id(0);
         record.set_start(0);
-        record.set_cigar(format!("{}M", read.len()).bytes());
+        record.set_cigar(format!("{}M", read.len()).bytes())?;
         record.set_seq_qual(
             read,
             iter::empty(), // record.qualities().to_readable().into_iter().map(|q| q - 33),
-        );
+        )?;
 
         writer.write(&record).unwrap();
 
@@ -320,7 +331,7 @@ fn calculate_primary<'a>(
         }
         unique_frequency.sort_by_key(|t| t.0);
         unique_frequency.reverse();
-        if unique_frequency.len() > 0 {
+        if !unique_frequency.is_empty() {
             print!(
                 "{}",
                 select_base(&read, unique_frequency, alpha)
@@ -329,11 +340,11 @@ fn calculate_primary<'a>(
             );
         }
     }
-    println!("");
+    println!();
 
     //stdout.get_mut().wait_with_output().unwrap();
     process.wait_with_output().unwrap();
-
+    return Ok(());
     // process.kill();
 }
 
@@ -413,6 +424,7 @@ fn bam_stats(path: String, end_margin: usize) {
 }
 
 fn main() {
+    env_logger::init();
     let args: Vec<String> = env::args().collect();
     // We assume that input is sorted by "samtools sort -n".
     //let reader = bam::IndexedReader::from_path(args[1].clone()).unwrap();
@@ -422,7 +434,8 @@ fn main() {
     let bai = command == "bai" || command == "bin";
     let stats = command == "stats" || command == "stat";
     let frag = command == "frag";
-    if !sa_merge && !realigner && !stats && !bai && !frag {
+    let bench = command == "bench" || command == "benchmark";
+    if !sa_merge && !realigner && !stats && !bai && !frag && !bench {
         let string = "    bam-handler
         
     USAGE:
@@ -433,7 +446,8 @@ fn main() {
         realign   Realign reads in bam file.
         stats     Collect statistics from a BAM file.
         bai       Output bins and counts of chunks of a BAI (the first chromosome in default).
-        frag      Split longer reads into small fragements.
+        frag      Split longer reads into small fragments.
+        bench     Benchmark of parsing CIGARS for the given range.
         ";
         println!("{}", string);
         return;
@@ -442,9 +456,14 @@ fn main() {
         bai_stats(args[2].clone(), 0);
         return;
     }
-    /*if frag {
-
-    }*/
+    if frag {
+        frag::frag(args[2].clone(), args[3].clone(), args.get(4).is_some());
+        return;
+    }
+    if bench {
+        frag::bench(args[2].clone(), args[3].clone()).unwrap();
+        return;
+    }
     if stats {
         let end_margin = args
             .get(3)
@@ -492,13 +511,15 @@ fn main() {
         let mut ref_seq = vec![];
         if !sa_merge {
             if let Some(ref_name) = ref_name {
-                let mut fasta_reader = bio::io::fasta::IndexedReader::from_file(path).unwrap();
-                fasta_reader.fetch(
-                    ref_name,
-                    record.start() as u64,
-                    record.calculate_end() as u64,
-                );
-                fasta_reader.read(&mut ref_seq);
+                let mut fasta_reader = fasta::IndexedReader::from_file(path).unwrap();
+                fasta_reader
+                    .fetch(
+                        ref_name,
+                        record.start() as u64,
+                        record.calculate_end() as u64,
+                    )
+                    .unwrap();
+                fasta_reader.read(&mut ref_seq).unwrap();
             }
         }
         // eprintln!("{:?} {}", record, record.flag().is_supplementary());
@@ -509,15 +530,15 @@ fn main() {
         } else {
             if primary.len() > x {
                 if sa_merge {
-                    for i in calculate_sam(primary, closure) {
+                    for i in calculate_sam(primary, closure).unwrap() {
                         writer.write(&i).unwrap();
                     }
                 } else {
-                    calculate_primary(primary, previous_name, &args[3], alpha - sigma);
+                    calculate_primary(primary, previous_name, &args[3], alpha - sigma).unwrap();
                 }
-            } else if primary.len() > 0 {
+            } else if !primary.is_empty() {
                 if sa_merge {
-                    for i in calculate_sam(primary, closure) {
+                    for i in calculate_sam(primary, closure).unwrap() {
                         writer.write(&i).unwrap();
                     }
                 } else {
@@ -540,7 +561,7 @@ fn main() {
                             }
                         }
                     }
-                    println!("");
+                    println!();
                 }
             }
             let previous = record.clone();
@@ -553,31 +574,28 @@ fn main() {
         }
     }
     if sa_merge {
-        for i in calculate_sam(primary, closure) {
+        for i in calculate_sam(primary, closure).unwrap() {
             writer.write(&i).unwrap();
         }
+    } else if primary.len() > x {
+        calculate_primary(primary, previous_name, &realigner, alpha - sigma).unwrap();
     } else {
-        if primary.len() > x {
-            calculate_primary(primary, previous_name, &realigner, alpha - sigma);
-        } else {
-            println!(">{}", String::from_utf8_lossy(&previous_name));
-            for (record, _, _) in primary {
-                if record.sequence().len() > 0 {
-                    //record.sequence().write_readable(&mut io::stdout());
-                    let seq = record.sequence();
-                    if record.flag().is_reverse_strand() {
-                        write_iterator(
-                            &mut io::stdout(),
-                            revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter(),
-                        )
-                        .unwrap();
-                    } else {
-                        write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i)))
-                            .unwrap();
-                    }
+        println!(">{}", String::from_utf8_lossy(&previous_name));
+        for (record, _, _) in primary {
+            if record.sequence().len() > 0 {
+                //record.sequence().write_readable(&mut io::stdout());
+                let seq = record.sequence();
+                if record.flag().is_reverse_strand() {
+                    write_iterator(
+                        &mut io::stdout(),
+                        revcomp((0..seq.len()).map(|i| seq.at(i))).into_iter(),
+                    )
+                    .unwrap();
+                } else {
+                    write_iterator(&mut io::stdout(), (0..seq.len()).map(|i| seq.at(i))).unwrap();
                 }
             }
-            println!("");
         }
+        println!();
     }
 }

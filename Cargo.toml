@@ -12,12 +12,15 @@ keywords = ["bioinformatics", "genome browser"]
 #crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
-bio = { git = "https://github.com/rust-bio/rust-bio" }
+# bio = { git = "https://github.com/rust-bio/rust-bio", rev="5b2b67b" }
 bam = { git = "https://github.com/6br/bam" }
 #bitpacking = "0.5" # Pfor
 byteorder = "*"
+csv = "*"
+env_logger = "*"
 #flate2 = "1.0" # A streaming compression/decompression library
 #libbigwig = { git = "https://github.com/6br/libBigWig" } # bigWig
+lazy_static = "*"
 log = "*"
 itertools = "*"
 regex = "*" 
@@ -26,5 +29,7 @@ regex = "*"
 #serde_derive = "*"
 #serde_json = "*"
 #serde_yaml = "*"
+genomic_range = { git = "https://github.com/6br/genomic_range", rev = "cba2b1c" }
+
 [build-dependencies]
 protoc-rust = "2.0"
