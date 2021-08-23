@@ -4,6 +4,7 @@ use bam::{
     record::{cigar::Operation, Cigar},
 };
 use genomic_range::StringRegion;
+use std::collections::HashSet;
 use std::{
     fs::File,
     io::Error,
@@ -133,15 +134,16 @@ pub fn bench(input: String, range: String) -> Result<(), Box<dyn std::error::Err
         prefetch_range.end as u32
     };
     let viewer = reader.fetch(&bam::bam_reader::Region::new(ref_id, start, end))?;
-    let mut counter = 0;
+    let mut set = HashSet::new();
     let start = Instant::now();
-    for record in viewer {
-        record?.calculate_end();
-        counter += 1;
-    }
+    viewer.for_each(|record| {
+        let record = record.unwrap();
+        record.calculate_end();
+        set.insert(record.name().to_owned());
+    });
     let duration = start.elapsed();
 
-    println!("Time elapsed is: {:?}, # of reads: {}", duration, counter);
+    println!("Time elapsed is: {:?}, # of reads: {}", duration, set.len());
     Ok(())
 }
 
