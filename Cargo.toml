@@ -17,6 +17,7 @@ bam = { git = "https://github.com/6br/bam" }
 #bitpacking = "0.5" # Pfor
 byteorder = "*"
 csv = "*"
+env_logger = "*"
 #flate2 = "1.0" # A streaming compression/decompression library
 #libbigwig = { git = "https://github.com/6br/libBigWig" } # bigWig
 lazy_static = "*"

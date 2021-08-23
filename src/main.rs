@@ -14,6 +14,7 @@ use bam::{
     Header, RecordWriter,
 };
 use byteorder::WriteBytesExt;
+use env_logger;
 use fasta::revcomp;
 use io::BufReader;
 use itertools::Itertools;
@@ -421,6 +422,7 @@ fn bam_stats(path: String, end_margin: usize) {
 }
 
 fn main() {
+    env_logger::init();
     let args: Vec<String> = env::args().collect();
     // We assume that input is sorted by "samtools sort -n".
     //let reader = bam::IndexedReader::from_path(args[1].clone()).unwrap();

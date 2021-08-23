@@ -234,8 +234,8 @@ pub fn frag(input_path: String, output_path: String, sequence_squash: bool) {
                 }
                 let mut readable: Vec<u8> = Vec::new();
                 cigar.write_readable(&mut readable).unwrap();
-                //let readable_string = String::from_utf8_lossy(&readable);
-                //eprintln!("{}", readable_string);
+                let readable_string = String::from_utf8_lossy(&readable);
+                debug!("{}", readable_string);
                 //let bytes = readable_string.bytes().into_iter();
                 record.set_cigar(readable).unwrap();
                 let previous_consumed_query_len = consumed_query_len;
