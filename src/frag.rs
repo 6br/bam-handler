@@ -315,6 +315,6 @@ pub fn frag(input_path: String, output_path: String, sequence_squash: bool) {
                 writer.write(&record).unwrap();
             }
         }
-        writer.finish().unwrap();
     }
+    writer.finish().unwrap();
 }
