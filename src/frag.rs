@@ -159,6 +159,7 @@ pub fn frag(input_path: String, output_path: String, sequence_squash: bool) {
 
     let mut writer = bam::BamWriter::build()
         .write_header(true)
+        .additional_threads(8)
         .from_stream(output, reader.header().clone())
         .unwrap();
 
