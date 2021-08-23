@@ -234,7 +234,7 @@ pub fn frag(input_path: String, output_path: String, sequence_squash: bool) {
                 }
                 let mut readable: Vec<u8> = Vec::new();
                 cigar.write_readable(&mut readable).unwrap();
-                let readable_string = String::from_utf8_lossy(&readable);
+                let readable_string = String::from_utf8_lossy(&readable).to_string();
                 debug!("{}", readable_string);
                 //let bytes = readable_string.bytes().into_iter();
                 record.set_cigar(readable).unwrap();
@@ -252,6 +252,10 @@ pub fn frag(input_path: String, output_path: String, sequence_squash: bool) {
                     previous_consumed_query_len,
                     record.cigar().calculate_query_len()
                 );
+                if previous_consumed_query_len == consumed_query_len {
+                    // eprintln!("No match; skipping {}", readable_string);
+                    continue;
+                }
                 assert!(
                     previous_consumed_query_len < consumed_query_len,
                     "{} {} {} {}",

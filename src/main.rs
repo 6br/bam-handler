@@ -3,6 +3,8 @@ extern crate log;
 extern crate bam;
 #[macro_use]
 extern crate lazy_static;
+
+#[warn(dead_code)]
 mod fasta;
 mod frag;
 
