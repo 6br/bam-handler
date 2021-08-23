@@ -133,14 +133,15 @@ pub fn bench(input: String, range: String) -> Result<(), Box<dyn std::error::Err
         prefetch_range.end as u32
     };
     let viewer = reader.fetch(&bam::bam_reader::Region::new(ref_id, start, end))?;
-
+    let mut counter = 0;
     let start = Instant::now();
     for record in viewer {
         record?.calculate_end();
+        counter += 1;
     }
     let duration = start.elapsed();
 
-    println!("Time elapsed in calculate_end() is: {:?}", duration);
+    println!("Time elapsed is: {:?}, # of reads: {}", duration, counter);
     Ok(())
 }
 
