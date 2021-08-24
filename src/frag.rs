@@ -144,6 +144,7 @@ pub fn bench(input: String, range: String) -> Result<(), Box<dyn std::error::Err
     let duration = start.elapsed();
 
     println!("Time elapsed is: {:?}, # of reads: {}", duration, set.len());
+    debug!("{:#?}", set);
     Ok(())
 }
 
