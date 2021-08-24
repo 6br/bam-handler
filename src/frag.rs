@@ -139,7 +139,9 @@ pub fn bench(input: String, range: String) -> Result<(), Box<dyn std::error::Err
     viewer.for_each(|record| {
         let record = record.unwrap();
         record.calculate_end();
-        set.insert(record.name().to_owned());
+        let name = record.name().to_vec().clone();
+        let name_str = String::from_utf8_lossy(&name).to_string();
+        set.insert(name_str);
     });
     let duration = start.elapsed();
 
